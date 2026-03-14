@@ -12,15 +12,14 @@ impl App {
         let config = crate::core::config::Config::load_or_create()?;
         let mut storage = crate::services::storage::Storage::open(&config.db_path)?;
 
-        let playback_state = storage.load_playback_state()?;
-        let queue = storage.load_queue()?;
-
         // Boot-time scan keeps DB consistent with file system before UI starts.
         let scan = scan_music_dir(&config.music_dir)?;
         storage.upsert_tracks(&scan.upserts)?;
         let _removed = storage.prune_missing_tracks(&scan.seen_paths)?;
 
         let tracks = storage.load_tracks()?;
+        let queue = storage.load_queue()?;
+        let playback_state = storage.load_playback_state()?;
         let player = crate::features::player::Player::new()?;
 
         Ok(Self {
@@ -40,19 +39,25 @@ impl App {
     }
 
     pub fn persist_playback_state(&self) -> Result<()> {
-        self.storage.save_playback_state(&self.session.playback_state)
+        self.storage
+            .save_playback_state(&self.session.playback_state)
     }
 
     pub fn scan_now(&mut self) -> Result<()> {
         let scan = scan_music_dir(&self.config.music_dir)?;
         self.storage.upsert_tracks(&scan.upserts)?;
         let _removed = self.storage.prune_missing_tracks(&scan.seen_paths)?;
-        self.session.tracks = self.storage.load_tracks()?;
+        self.reload_session_state()?;
         Ok(())
     }
 
     pub fn play_track(&mut self, track_id: i64) -> Result<()> {
-        if let Some(track) = self.session.tracks.iter().find(|track| track.id == track_id) {
+        if let Some(track) = self
+            .session
+            .tracks
+            .iter()
+            .find(|track| track.id == track_id)
+        {
             self.player.play_file(&track.path, 0)?;
             self.session.playback_state.current_track_id = Some(track_id);
             self.session.playback_state.position_secs = 0;
@@ -70,7 +75,12 @@ impl App {
             .session
             .playback_state
             .current_track_id
-            .and_then(|id| self.session.queue.iter().position(|queue_id| *queue_id == id))
+            .and_then(|id| {
+                self.session
+                    .queue
+                    .iter()
+                    .position(|queue_id| *queue_id == id)
+            })
             .unwrap_or(usize::MAX);
 
         let next_idx = if current_idx == usize::MAX {
@@ -98,7 +108,12 @@ impl App {
             .session
             .playback_state
             .current_track_id
-            .and_then(|id| self.session.queue.iter().position(|queue_id| *queue_id == id))
+            .and_then(|id| {
+                self.session
+                    .queue
+                    .iter()
+                    .position(|queue_id| *queue_id == id)
+            })
             .unwrap_or(0);
 
         let prev_idx = if current_idx == 0 { 0 } else { current_idx - 1 };
@@ -156,7 +171,7 @@ impl App {
 
     pub fn toggle_favorite(&mut self, track_id: i64) -> Result<()> {
         self.storage.toggle_favorite(track_id)?;
-        self.session.tracks = self.storage.load_tracks()?;
+        self.reload_session_state()?;
         Ok(())
     }
 
@@ -173,5 +188,25 @@ impl App {
 
     pub fn playback_state(&self) -> &PlaybackState {
         &self.session.playback_state
+    }
+
+    fn reload_session_state(&mut self) -> Result<()> {
+        self.session.tracks = self.storage.load_tracks()?;
+        self.session.queue = self.storage.load_queue()?;
+
+        let current_track_missing = self
+            .session
+            .playback_state
+            .current_track_id
+            .is_some_and(|track_id| !self.session.tracks.iter().any(|track| track.id == track_id));
+
+        if current_track_missing {
+            self.player.stop();
+            self.session.playback_state.current_track_id = None;
+            self.session.playback_state.position_secs = 0;
+            self.persist_playback_state()?;
+        }
+
+        Ok(())
     }
 }

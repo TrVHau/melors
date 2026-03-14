@@ -148,13 +148,19 @@ impl UiState {
             ]
         };
 
-        let paragraph = Paragraph::new(lines)
-            .block(Block::default().borders(Borders::ALL).title(" Now Playing "));
+        let paragraph = Paragraph::new(lines).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Now Playing "),
+        );
         f.render_widget(paragraph, area);
     }
 
     fn draw_progress(&self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
-        let current_duration = app.current_track().and_then(|track| track.duration_secs).unwrap_or(0);
+        let current_duration = app
+            .current_track()
+            .and_then(|track| track.duration_secs)
+            .unwrap_or(0);
 
         let ratio = if current_duration > 0 {
             (app.playback_state().position_secs as f64 / current_duration as f64).clamp(0.0, 1.0)
@@ -165,7 +171,11 @@ impl UiState {
         let label = if self.mode == InputMode::Search {
             format!("/{}", self.search_input)
         } else {
-            format!("{}s / {}s", app.playback_state().position_secs, current_duration)
+            format!(
+                "{}s / {}s",
+                app.playback_state().position_secs,
+                current_duration
+            )
         };
 
         let gauge = Gauge::default()

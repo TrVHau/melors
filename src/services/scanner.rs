@@ -20,7 +20,10 @@ pub fn scan_music_dir(music_dir: &Path) -> Result<ScanResult> {
     let mut seen_paths = HashSet::new();
 
     if !music_dir.exists() {
-        return Ok(ScanResult { upserts, seen_paths });
+        return Ok(ScanResult {
+            upserts,
+            seen_paths,
+        });
     }
 
     for entry in WalkDir::new(music_dir)
@@ -55,7 +58,10 @@ pub fn scan_music_dir(music_dir: &Path) -> Result<ScanResult> {
         });
     }
 
-    Ok(ScanResult { upserts, seen_paths })
+    Ok(ScanResult {
+        upserts,
+        seen_paths,
+    })
 }
 
 fn is_mp3(path: &Path) -> bool {

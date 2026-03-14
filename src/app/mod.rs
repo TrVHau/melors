@@ -1,7 +1,7 @@
+use self::state::AppSession;
 use crate::core::config::Config;
 use crate::features::player::Player;
 use crate::services::storage::Storage;
-use self::state::AppSession;
 
 mod actions;
 pub mod state;

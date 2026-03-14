@@ -54,7 +54,8 @@ impl Config {
             let initial = ConfigFile {
                 music_dir: Some(cfg.music_dir.clone()),
             };
-            let toml_out = toml::to_string_pretty(&initial).context("failed to serialize config")?;
+            let toml_out =
+                toml::to_string_pretty(&initial).context("failed to serialize config")?;
             fs::write(&config_path, toml_out)
                 .with_context(|| format!("failed to write {}", config_path.display()))?;
         }

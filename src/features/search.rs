@@ -18,7 +18,9 @@ pub fn search_tracks<'a>(tracks: &'a [Track], keyword: &str) -> Vec<&'a Track> {
                 track.artist.as_deref().unwrap_or_default(),
                 track.album.as_deref().unwrap_or_default()
             );
-            matcher.fuzzy_match(&haystack, keyword).map(|score| (track, score))
+            matcher
+                .fuzzy_match(&haystack, keyword)
+                .map(|score| (track, score))
         })
         .collect();
 

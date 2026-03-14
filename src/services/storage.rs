@@ -12,6 +12,7 @@ pub struct Storage {
 impl Storage {
     pub fn open(db_path: &std::path::Path) -> Result<Self> {
         let conn = Connection::open(db_path)?;
+        conn.execute_batch("PRAGMA foreign_keys = ON;")?;
         let storage = Self { conn };
         storage.run_migrations()?;
         Ok(storage)
@@ -70,7 +71,7 @@ impl Storage {
                 FOREIGN KEY(playlist_id) REFERENCES playlists(id),
                 FOREIGN KEY(track_id) REFERENCES tracks(id)
             );
-            "
+            ",
         )?;
         self.conn.execute(
             "INSERT OR IGNORE INTO playback_state (id, current_track_id, position_secs, shuffle_enabled, repeat_mode) VALUES (1, NULL, 0, 0, 0)",
@@ -131,6 +132,10 @@ impl Storage {
         let tx = self.conn.transaction()?;
         for id in &stale_ids {
             tx.execute("DELETE FROM queue_state WHERE track_id=?1", params![id])?;
+            tx.execute(
+                "UPDATE playback_state SET current_track_id=NULL, position_secs=0 WHERE current_track_id=?1",
+                params![id],
+            )?;
             tx.execute("DELETE FROM tracks WHERE id=?1", params![id])?;
             tx.execute(
                 "UPDATE playlist_items SET track_id=NULL, is_missing=1 WHERE track_id=?1",
@@ -216,7 +221,8 @@ impl Storage {
         let tx = self.conn.transaction()?;
         tx.execute("DELETE FROM queue_state", [])?;
         {
-            let mut stmt = tx.prepare("INSERT INTO queue_state (position, track_id) VALUES (?1, ?2)")?;
+            let mut stmt =
+                tx.prepare("INSERT INTO queue_state (position, track_id) VALUES (?1, ?2)")?;
             for (idx, id) in track_ids.iter().enumerate() {
                 stmt.execute(params![idx as i64, id])?;
             }

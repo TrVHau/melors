@@ -18,6 +18,19 @@ use crate::app::App;
 
 use self::state::UiState;
 
+fn record_first_error<E>(slot: &mut Option<anyhow::Error>, result: std::result::Result<(), E>)
+where
+    E: Into<anyhow::Error>,
+{
+    if slot.is_some() {
+        return;
+    }
+
+    if let Err(error) = result {
+        *slot = Some(error.into());
+    }
+}
+
 pub fn run(app: &mut App) -> Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -27,23 +40,32 @@ pub fn run(app: &mut App) -> Result<()> {
 
     let mut ui = UiState::new();
 
-    let run_result = loop {
-        app.refresh_playback_position()?;
-        terminal.draw(|frame| ui.draw(frame, app))?;
+    let run_result = (|| -> Result<()> {
+        loop {
+            app.refresh_playback_position()?;
+            terminal.draw(|frame| ui.draw(frame, app))?;
 
-        if event::poll(Duration::from_millis(50))?
-            && let Event::Key(key) = event::read()?
-            && ui.handle_key(app, key)?
-        {
-            break Ok(());
+            if event::poll(Duration::from_millis(50))?
+                && let Event::Key(key) = event::read()?
+                && ui.handle_key(app, key)?
+            {
+                return Ok(());
+            }
         }
-    };
+    })();
 
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-    terminal.show_cursor()?;
+    let mut first_error = run_result.err();
 
-    app.persist_playback_state()?;
+    record_first_error(&mut first_error, disable_raw_mode());
+    record_first_error(
+        &mut first_error,
+        execute!(terminal.backend_mut(), LeaveAlternateScreen),
+    );
+    record_first_error(&mut first_error, terminal.show_cursor());
+    record_first_error(&mut first_error, app.persist_playback_state());
 
-    run_result
+    match first_error {
+        Some(error) => Err(error),
+        None => Ok(()),
+    }
 }
