@@ -33,6 +33,8 @@ impl Config {
             .with_context(|| format!("failed to create {}", cache_dir.display()))?;
 
         let default_music_dir = home.join("Music").join("melors");
+        fs::create_dir_all(&default_music_dir)
+            .with_context(|| format!("failed to create {}", default_music_dir.display()))?;
         let parsed = if config_path.exists() {
             let raw = fs::read_to_string(&config_path)
                 .with_context(|| format!("failed to read {}", config_path.display()))?;

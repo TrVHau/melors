@@ -1,103 +1,100 @@
 # melors
 
-`melors` is a local-first, keyboard-first terminal music player for personal MP3 libraries.
+A keyboard-driven terminal music player for local MP3 libraries, written in Rust.
 
-It scans a local MP3 folder, stores metadata in SQLite, and lets you browse and control playback entirely from the keyboard.
+```
+ > * #0042 Tame Impala - Let It Happen
+   * #0089 Radiohead - Reckoner
+     #0103 Mac DeMarco - Chamber of Reflection
+     #0211 LCD Soundsystem - All My Friends
+```
 
-## What It Does
+## Features
 
-- Scans a local MP3 library on startup
-- Extracts ID3 metadata with filename fallback
-- Persists library index and playback state in SQLite
-- Plays audio in the terminal with keyboard controls
-- Supports fuzzy search over tracks, artists, and albums
-- Remembers the last playback position between sessions
+- Scans a local MP3 folder automatically on startup
+- Reads ID3 tags (title, artist, album) with filename fallback
+- Fuzzy search across tracks, artists, and albums
+- Full keyboard control — no mouse required
+- Remembers playback position, queue, and repeat mode between sessions
+- Favorites and play count tracking
+- Zero configuration needed out of the box
 
 ## Requirements
 
-- Rust stable
-- Cargo
-- A working audio output device
-- A folder containing `.mp3` files
+- Rust (stable)
+- A working audio output device (ALSA on Linux, CoreAudio on macOS)
 
-## Install And Run
+## Install
 
 ```bash
-git clone <your-fork-or-this-repo-url>
+git clone https://github.com/TrVHau/melors
 cd melors
-cargo run
+cargo run --release
 ```
 
-On first launch, `melors` creates its config and data directories automatically.
+On first launch the app creates all directories it needs, including the music folder:
 
-Default locations:
+| Purpose      | Path                              |
+| ------------ | --------------------------------- |
+| Music folder | `~/Music/melors/`                 |
+| Config       | `~/.config/melors/config.toml`    |
+| Database     | `~/.local/share/melors/db.sqlite` |
+| Cache        | `~/.cache/melors/`                |
 
-- Config: `~/.config/melors/config.toml`
-- Database: `~/.local/share/melors/db.sqlite`
-- Cache: `~/.cache/melors/`
-- Default music folder: `~/Music/melors`
+Drop your `.mp3` files into `~/Music/melors/` and launch the app. That's it.
 
-## Configure Your Music Folder
+## Change The Music Folder
 
-Edit `~/.config/melors/config.toml`:
+Open `~/.config/melors/config.toml` and set `music_dir` to any path you want:
 
-```bash
-music_dir = "/absolute/path/to/your/mp3-library"
+```toml
+music_dir = "/home/you/Music"
 ```
 
-Use a directory that contains `.mp3` files. The app rescans this folder on startup and when you trigger a manual rescan.
+The app rescans this folder every time it starts and whenever you press `r`.
 
-## How To Use
+## Keybindings
 
-When the app starts, it scans your library and opens the terminal UI.
+### Navigation
 
-- `j` / `k`: move selection down or up
-- `h` / `l`: switch focus between panels
-- `Enter`: play the selected track
-- `Space`: play or pause
-- `n` / `p`: next or previous track
-- `Left` / `Right`: seek backward or forward 5 seconds
-- `Shift+Left` / `Shift+Right`: seek backward or forward 10 seconds
-- `/`: open search mode
-- `f`: toggle favorite on the selected track
-- `r`: rescan the library from disk
-- `q`: quit the app
+| Key       | Action              |
+| --------- | ------------------- |
+| `j` / `↓` | Move selection down |
+| `k` / `↑` | Move selection up   |
+| `h`       | Focus sidebar       |
+| `l`       | Focus library       |
+| `Enter`   | Play selected track |
+| `q`       | Quit                |
+
+### Playback
+
+| Key                   | Action           |
+| --------------------- | ---------------- |
+| `Space`               | Play / pause     |
+| `n`                   | Next track       |
+| `p`                   | Previous track   |
+| `←` / `→`             | Seek −5s / +5s   |
+| `Shift+←` / `Shift+→` | Seek −10s / +10s |
+
+### Library
+
+| Key | Action                            |
+| --- | --------------------------------- |
+| `/` | Open search                       |
+| `f` | Toggle favorite on selected track |
+| `r` | Rescan library from disk          |
 
 ## Search
 
-Press `/`, type a keyword, then use `j` / `k` to move through the results. Press `Enter` to play the selected result, or `Esc` to leave search mode.
+Press `/` to enter search mode. Type a keyword — results update as you type.
 
-## Notes
+- `j` / `k` — move through results
+- `Enter` — play the selected result
+- `Backspace` — delete last character
+- `Esc` or `q` — exit search, go back to full library
 
-- If the configured music folder does not exist yet, the app starts with an empty library.
-- The current playback position is saved when playback state changes and again on exit.
-- If files are removed from disk and you rescan, stale queue and playback references are cleaned up automatically.
-
-## Development
-
-```bash
-# Format
-cargo fmt
-
-# Lint
-cargo clippy --all-targets --all-features -- -D warnings
-
-# Build check
-cargo check
-```
-
-## Contributing
-
-Contributions, bug reports, and feature proposals are welcome.
-
-1. Fork this repository.
-2. Create a feature branch from `main`.
-3. Make focused changes with clear commit messages.
-4. Run local checks (`fmt`, `clippy`, `check`).
-5. Open a Pull Request.
-
-Read full guidelines in `CONTRIBUTING.md`.
+Search matches across track title, artist, and album using fuzzy scoring.
 
 ## License
 
-This project is licensed under the MIT License. See `LICENSE`.
+MIT — see [LICENSE](LICENSE).
