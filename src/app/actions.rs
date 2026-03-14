@@ -1,4 +1,4 @@
-use std::collections::hash_map::DefaultHasher;
+use std::collections::{HashSet, hash_map::DefaultHasher};
 use std::hash::{Hash, Hasher};
 use std::time::SystemTime;
 
@@ -48,7 +48,7 @@ impl App {
         let playback_state = storage.load_playback_state()?;
         let player = crate::features::player::Player::new()?;
 
-        Ok(Self {
+        let mut app = Self {
             config,
             storage,
             player,
@@ -57,7 +57,11 @@ impl App {
                 queue,
                 playback_state,
             },
-        })
+        };
+
+        app.normalize_queue()?;
+
+        Ok(app)
     }
 
     pub fn run_tui(&mut self) -> Result<()> {
@@ -78,6 +82,8 @@ impl App {
     }
 
     pub fn play_track(&mut self, track_id: i64) -> Result<()> {
+        self.ensure_track_in_queue(track_id)?;
+
         if let Some(track) = self
             .session
             .tracks
@@ -207,6 +213,14 @@ impl App {
         Ok(self.session.playback_state.repeat_mode)
     }
 
+    pub fn adjust_volume(&mut self, delta: f32) -> u8 {
+        self.player.adjust_volume(delta)
+    }
+
+    pub fn volume_percent(&self) -> u8 {
+        self.player.volume_percent()
+    }
+
     pub fn toggle_shuffle(&mut self) -> Result<bool> {
         self.session.playback_state.shuffle_enabled = !self.session.playback_state.shuffle_enabled;
         self.rebuild_queue()?;
@@ -214,11 +228,48 @@ impl App {
         Ok(self.session.playback_state.shuffle_enabled)
     }
 
+    pub fn add_to_queue(&mut self, track_id: i64) -> Result<bool> {
+        if self.track_by_id(track_id).is_none() {
+            return Ok(false);
+        }
+
+        self.session.queue.push(track_id);
+        self.persist_queue()?;
+        Ok(true)
+    }
+
+    pub fn remove_queue_index(&mut self, index: usize) -> Result<Option<i64>> {
+        if index >= self.session.queue.len() {
+            return Ok(None);
+        }
+
+        let removed = self.session.queue.remove(index);
+        self.persist_queue()?;
+        Ok(Some(removed))
+    }
+
+    pub fn play_queue_index(&mut self, index: usize) -> Result<Option<i64>> {
+        if let Some(track_id) = self.session.queue.get(index).copied() {
+            self.play_track(track_id)?;
+            return Ok(Some(track_id));
+        }
+
+        Ok(None)
+    }
+
     pub fn current_track(&self) -> Option<&Track> {
         self.session
             .playback_state
             .current_track_id
             .and_then(|id| self.session.tracks.iter().find(|track| track.id == id))
+    }
+
+    pub fn queue_tracks(&self) -> Vec<&Track> {
+        self.session
+            .queue
+            .iter()
+            .filter_map(|id| self.track_by_id(*id))
+            .collect()
     }
 
     pub fn tracks(&self) -> &[Track] {
@@ -235,13 +286,14 @@ impl App {
             shuffle_vec(&mut ids, self.session.playback_state.current_track_id);
         }
         self.session.queue = ids.clone();
-        self.storage.replace_queue(&ids)?;
+        self.persist_queue()?;
         Ok(())
     }
 
     fn reload_session_state(&mut self) -> Result<()> {
         self.session.tracks = self.storage.load_tracks()?;
         self.session.queue = self.storage.load_queue()?;
+        self.normalize_queue()?;
 
         let current_track_missing = self
             .session
@@ -257,5 +309,43 @@ impl App {
         }
 
         Ok(())
+    }
+
+    fn normalize_queue(&mut self) -> Result<()> {
+        let valid_ids: HashSet<i64> = self.session.tracks.iter().map(|track| track.id).collect();
+        let original_len = self.session.queue.len();
+        self.session.queue.retain(|id| valid_ids.contains(id));
+
+        if self.session.queue.is_empty() && !self.session.tracks.is_empty() {
+            self.rebuild_queue()?;
+            return Ok(());
+        }
+
+        if self.session.queue.len() != original_len {
+            self.persist_queue()?;
+        }
+
+        Ok(())
+    }
+
+    fn ensure_track_in_queue(&mut self, track_id: i64) -> Result<()> {
+        if self.session.queue.contains(&track_id) {
+            return Ok(());
+        }
+
+        self.session.queue.push(track_id);
+        self.persist_queue()?;
+        Ok(())
+    }
+
+    fn persist_queue(&mut self) -> Result<()> {
+        self.storage.replace_queue(&self.session.queue)
+    }
+
+    fn track_by_id(&self, track_id: i64) -> Option<&Track> {
+        self.session
+            .tracks
+            .iter()
+            .find(|track| track.id == track_id)
     }
 }

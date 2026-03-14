@@ -1,4 +1,5 @@
 use std::cmp::min;
+use std::fmt;
 
 use crate::app::App;
 use crate::core::model::Track;
@@ -8,6 +9,7 @@ use crate::features::search::search_tracks;
 pub enum FocusPanel {
     Sidebar,
     Library,
+    Queue,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -16,11 +18,30 @@ pub enum InputMode {
     Search,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VisualizerMode {
+    Cava,
+    Clock,
+    CMatrix,
+}
+
+impl fmt::Display for VisualizerMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Cava => write!(f, "Cava"),
+            Self::Clock => write!(f, "Clock"),
+            Self::CMatrix => write!(f, "CMatrix"),
+        }
+    }
+}
+
 pub struct UiState {
     pub focus: FocusPanel,
     pub mode: InputMode,
+    pub visualizer_mode: VisualizerMode,
     pub search_input: String,
-    pub selected: usize,
+    pub library_selected: usize,
+    pub queue_selected: usize,
     pub status: String,
 }
 
@@ -29,10 +50,16 @@ impl UiState {
         Self {
             focus: FocusPanel::Library,
             mode: InputMode::Normal,
+            visualizer_mode: VisualizerMode::Cava,
             search_input: String::new(),
-            selected: 0,
+            library_selected: 0,
+            queue_selected: 0,
             status: String::from("Ready"),
         }
+    }
+
+    pub fn set_visualizer_mode(&mut self, mode: VisualizerMode) {
+        self.visualizer_mode = mode;
     }
 
     pub fn visible_tracks<'a>(&self, app: &'a App) -> Vec<&'a Track> {
@@ -47,7 +74,9 @@ impl UiState {
         if tracks.is_empty() {
             None
         } else {
-            tracks.get(min(self.selected, tracks.len() - 1)).copied()
+            tracks
+                .get(min(self.library_selected, tracks.len() - 1))
+                .copied()
         }
     }
 
@@ -55,15 +84,49 @@ impl UiState {
         self.selected_track(app).map(|track| track.id)
     }
 
+    pub fn focus_left(&mut self) {
+        self.focus = match self.focus {
+            FocusPanel::Sidebar => FocusPanel::Sidebar,
+            FocusPanel::Library => FocusPanel::Sidebar,
+            FocusPanel::Queue => FocusPanel::Library,
+        };
+    }
+
+    pub fn focus_right(&mut self) {
+        self.focus = match self.focus {
+            FocusPanel::Sidebar => FocusPanel::Library,
+            FocusPanel::Library => FocusPanel::Queue,
+            FocusPanel::Queue => FocusPanel::Queue,
+        };
+    }
+
     pub fn move_selection(&mut self, app: &App, delta: isize) {
-        let len = self.visible_tracks(app).len();
+        let len = match self.focus {
+            FocusPanel::Sidebar => 0,
+            FocusPanel::Library => self.visible_tracks(app).len(),
+            FocusPanel::Queue => app.queue_tracks().len(),
+        };
+
         if len == 0 {
-            self.selected = 0;
+            match self.focus {
+                FocusPanel::Library => self.library_selected = 0,
+                FocusPanel::Queue => self.queue_selected = 0,
+                FocusPanel::Sidebar => {}
+            }
             return;
         }
 
-        let current = self.selected as isize;
+        let current = match self.focus {
+            FocusPanel::Sidebar => 0,
+            FocusPanel::Library => self.library_selected,
+            FocusPanel::Queue => self.queue_selected,
+        } as isize;
         let next = (current + delta).clamp(0, len as isize - 1);
-        self.selected = next as usize;
+
+        match self.focus {
+            FocusPanel::Sidebar => {}
+            FocusPanel::Library => self.library_selected = next as usize,
+            FocusPanel::Queue => self.queue_selected = next as usize,
+        }
     }
 }

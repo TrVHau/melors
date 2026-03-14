@@ -57,24 +57,29 @@ The app rescans this folder every time it starts and whenever you press `r`.
 
 ### Navigation
 
-| Key       | Action              |
-| --------- | ------------------- |
-| `j` / `↓` | Move selection down |
-| `k` / `↑` | Move selection up   |
-| `h`       | Focus sidebar       |
-| `l`       | Focus library       |
-| `Enter`   | Play selected track |
-| `q`       | Quit                |
+| Key       | Action                            |
+| --------- | --------------------------------- |
+| `j` / `↓` | Move selection down               |
+| `k` / `↑` | Move selection up                 |
+| `h`       | Move focus left                   |
+| `l`       | Move focus right                  |
+| `Enter`   | Play selected track or queue item |
+| `q`       | Quit                              |
 
 ### Playback
 
-| Key                   | Action           |
-| --------------------- | ---------------- |
-| `Space`               | Play / pause     |
-| `n`                   | Next track       |
-| `p`                   | Previous track   |
-| `←` / `→`             | Seek −5s / +5s   |
-| `Shift+←` / `Shift+→` | Seek −10s / +10s |
+| Key                   | Action                       |
+| --------------------- | ---------------------------- |
+| `Space`               | Play / pause                 |
+| `n`                   | Next track                   |
+| `p`                   | Previous track               |
+| `←` / `→`             | Seek −5s / +5s               |
+| `Shift+←` / `Shift+→` | Seek −10s / +10s             |
+| `+` / `=`             | Volume up                    |
+| `-`                   | Volume down                  |
+| `Alt+1`               | Switch to Cava visualizer    |
+| `Alt+2`               | Switch to Clock visualizer   |
+| `Alt+3`               | Switch to CMatrix visualizer |
 
 ### Library
 
@@ -82,7 +87,11 @@ The app rescans this folder every time it starts and whenever you press `r`.
 | --- | --------------------------------- |
 | `/` | Open search                       |
 | `f` | Toggle favorite on selected track |
+| `a` | Add selected track to queue       |
+| `d` | Remove selected queue item        |
 | `r` | Rescan library from disk          |
+| `e` | Cycle repeat mode                 |
+| `s` | Toggle shuffle                    |
 
 ## Search
 
@@ -94,6 +103,16 @@ Press `/` to enter search mode. Type a keyword — results update as you type.
 - `Esc` or `q` — exit search, go back to full library
 
 Search matches across track title, artist, and album using fuzzy scoring.
+
+## Visualizer Area
+
+The lower-right panel now supports three code-native modes:
+
+- `Cava` via `Alt+1`
+- `Clock` via `Alt+2`
+- `CMatrix` via `Alt+3`
+
+These modes are rendered directly in the TUI code, not embedded from external tools.
 
 ## License
 

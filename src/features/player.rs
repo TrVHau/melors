@@ -12,6 +12,7 @@ pub struct Player {
     base_position_secs: i64,
     started_at: Option<Instant>,
     paused: bool,
+    volume: f32,
 }
 
 struct Backend {
@@ -34,11 +35,13 @@ impl Player {
             base_position_secs: 0,
             started_at: None,
             paused: true,
+            volume: 1.0,
         })
     }
 
     pub fn play_file(&mut self, path: &Path, start_secs: i64) -> Result<()> {
         let sink = Self::build_sink(&self.backend.handle, path, start_secs.max(0) as u64)?;
+        sink.set_volume(self.volume);
         self.stop_current();
         self.backend.sink = Some(sink);
         self.current_path = Some(path.to_path_buf());
@@ -74,6 +77,7 @@ impl Player {
         let was_paused = self.paused;
         if let Some(path) = self.current_path.clone() {
             let sink = Self::build_sink(&self.backend.handle, &path, position_secs.max(0) as u64)?;
+            sink.set_volume(self.volume);
             self.stop_current();
             if was_paused {
                 sink.pause();
@@ -103,6 +107,19 @@ impl Player {
 
     pub fn has_active_sink(&self) -> bool {
         self.backend.sink.is_some()
+    }
+
+    pub fn adjust_volume(&mut self, delta: f32) -> u8 {
+        let next = (self.volume + delta).clamp(0.0, 1.5);
+        self.volume = next;
+        if let Some(sink) = self.backend.sink.as_ref() {
+            sink.set_volume(self.volume);
+        }
+        self.volume_percent()
+    }
+
+    pub fn volume_percent(&self) -> u8 {
+        (self.volume * 100.0).round() as u8
     }
 
     pub fn stop(&mut self) {

@@ -3,12 +3,33 @@ use crossterm::event::{self, KeyCode, KeyEvent, KeyModifiers};
 
 use crate::app::App;
 
-use super::state::{FocusPanel, InputMode, UiState};
+use super::state::{FocusPanel, InputMode, UiState, VisualizerMode};
 
 impl UiState {
     pub fn handle_key(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
         if key.kind != event::KeyEventKind::Press {
             return Ok(false);
+        }
+
+        if key.modifiers.contains(KeyModifiers::ALT) {
+            match key.code {
+                KeyCode::Char('1') => {
+                    self.set_visualizer_mode(VisualizerMode::Cava);
+                    self.status = String::from("Visualizer: Cava");
+                    return Ok(false);
+                }
+                KeyCode::Char('2') => {
+                    self.set_visualizer_mode(VisualizerMode::Clock);
+                    self.status = String::from("Visualizer: Clock");
+                    return Ok(false);
+                }
+                KeyCode::Char('3') => {
+                    self.set_visualizer_mode(VisualizerMode::CMatrix);
+                    self.status = String::from("Visualizer: CMatrix");
+                    return Ok(false);
+                }
+                _ => {}
+            }
         }
 
         if self.mode == InputMode::Search {
@@ -17,11 +38,14 @@ impl UiState {
 
         match key.code {
             KeyCode::Char('q') => return Ok(true),
-            KeyCode::Char('h') => self.focus = FocusPanel::Sidebar,
-            KeyCode::Char('l') => self.focus = FocusPanel::Library,
+            KeyCode::Char('h') => self.focus_left(),
+            KeyCode::Char('l') => self.focus_right(),
             KeyCode::Char('j') | KeyCode::Down => self.move_selection(app, 1),
             KeyCode::Char('k') | KeyCode::Up => self.move_selection(app, -1),
-            KeyCode::Enter => self.play_selected(app)?,
+            KeyCode::Enter => match self.focus {
+                FocusPanel::Queue => self.play_selected_queue(app)?,
+                _ => self.play_selected(app)?,
+            },
             KeyCode::Char(' ') => {
                 let paused = app.toggle_play_pause()?;
                 self.status = if paused {
@@ -71,6 +95,22 @@ impl UiState {
                     self.status = format!("Favorite toggled #{}", track_id);
                 }
             }
+            KeyCode::Char('a') => {
+                if let Some(track_id) = self.selected_track_id(app)
+                    && app.add_to_queue(track_id)?
+                {
+                    self.status = format!("Queued #{}", track_id);
+                }
+            }
+            KeyCode::Char('d') => {
+                if matches!(self.focus, FocusPanel::Queue)
+                    && let Some(track_id) = app.remove_queue_index(self.queue_selected)?
+                {
+                    self.status = format!("Removed from queue #{}", track_id);
+                    let queue_len = app.queue_tracks().len();
+                    self.queue_selected = self.queue_selected.min(queue_len.saturating_sub(1));
+                }
+            }
             KeyCode::Char('e') => {
                 let mode = app.toggle_repeat()?;
                 self.status = format!("Repeat: {mode}");
@@ -83,6 +123,14 @@ impl UiState {
                     String::from("Shuffle: Off")
                 };
             }
+            KeyCode::Char('+') | KeyCode::Char('=') => {
+                let volume = app.adjust_volume(0.05);
+                self.status = format!("Volume: {volume}%");
+            }
+            KeyCode::Char('-') => {
+                let volume = app.adjust_volume(-0.05);
+                self.status = format!("Volume: {volume}%");
+            }
             _ => {}
         }
 
@@ -94,7 +142,7 @@ impl UiState {
             KeyCode::Esc | KeyCode::Char('q') => {
                 self.mode = InputMode::Normal;
                 self.search_input.clear();
-                self.selected = 0;
+                self.library_selected = 0;
                 self.status = String::from("Back to normal mode");
             }
             KeyCode::Enter => {
@@ -104,7 +152,7 @@ impl UiState {
             }
             KeyCode::Backspace => {
                 self.search_input.pop();
-                self.selected = 0;
+                self.library_selected = 0;
             }
             KeyCode::Down | KeyCode::Char('j') => self.move_selection(app, 1),
             KeyCode::Up | KeyCode::Char('k') => self.move_selection(app, -1),
@@ -113,7 +161,7 @@ impl UiState {
                     && !key.modifiers.contains(KeyModifiers::ALT)
                 {
                     self.search_input.push(c);
-                    self.selected = 0;
+                    self.library_selected = 0;
                 }
             }
             _ => {}
@@ -125,6 +173,13 @@ impl UiState {
         if let Some(track_id) = self.selected_track_id(app) {
             app.play_track(track_id)?;
             self.status = format!("Playing #{}", track_id);
+        }
+        Ok(())
+    }
+
+    fn play_selected_queue(&mut self, app: &mut App) -> Result<()> {
+        if let Some(track_id) = app.play_queue_index(self.queue_selected)? {
+            self.status = format!("Playing from queue #{}", track_id);
         }
         Ok(())
     }
