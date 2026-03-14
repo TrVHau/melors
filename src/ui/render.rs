@@ -1,4 +1,6 @@
 use std::cmp::min;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::Local;
@@ -83,11 +85,11 @@ impl UiState {
     }
 
     fn draw_library(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
-        let tracks = self.visible_tracks(app);
-        if tracks.is_empty() {
+        let rows_len = self.library_rows(app).len();
+        if rows_len == 0 {
             self.library_selected = 0;
         } else {
-            self.library_selected = min(self.library_selected, tracks.len() - 1);
+            self.library_selected = min(self.library_selected, rows_len - 1);
         }
 
         let is_focus = matches!(self.focus, FocusPanel::Library);
@@ -105,28 +107,14 @@ impl UiState {
                 Style::default()
             });
 
-        let items: Vec<ListItem<'_>> = tracks
+        let items: Vec<ListItem<'_>> = self
+            .library_rows(app)
             .iter()
-            .map(|track| {
-                let marker = if Some(track.id) == app.playback_state().current_track_id {
-                    ">"
-                } else {
-                    " "
-                };
-                let favorite = if track.favorite { "*" } else { " " };
-                ListItem::new(Line::from(format!(
-                    "{}{} #{:04} {} - {}",
-                    marker,
-                    favorite,
-                    track.id,
-                    track.artist.as_deref().unwrap_or("Unknown Artist"),
-                    track.title
-                )))
-            })
+            .map(|row| ListItem::new(Line::from(row.clone())))
             .collect();
 
         let mut state = ListState::default();
-        state.select(if tracks.is_empty() {
+        state.select(if rows_len == 0 {
             None
         } else {
             Some(self.library_selected)
@@ -145,11 +133,11 @@ impl UiState {
     }
 
     fn draw_queue(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
-        let queue_tracks = app.queue_tracks();
-        if queue_tracks.is_empty() {
+        let queue_len = self.queue_rows(app).len();
+        if queue_len == 0 {
             self.queue_selected = 0;
         } else {
-            self.queue_selected = min(self.queue_selected, queue_tracks.len() - 1);
+            self.queue_selected = min(self.queue_selected, queue_len - 1);
         }
 
         let block = Block::default()
@@ -161,31 +149,17 @@ impl UiState {
                 Style::default()
             });
 
-        let items: Vec<ListItem<'_>> = if queue_tracks.is_empty() {
+        let items: Vec<ListItem<'_>> = if queue_len == 0 {
             vec![ListItem::new(Line::from("(queue empty)"))]
         } else {
-            queue_tracks
+            self.queue_rows(app)
                 .iter()
-                .enumerate()
-                .map(|(idx, track)| {
-                    let marker = if Some(track.id) == app.playback_state().current_track_id {
-                        ">"
-                    } else {
-                        " "
-                    };
-                    ListItem::new(Line::from(format!(
-                        "{} {:02}. {} - {}",
-                        marker,
-                        idx + 1,
-                        track.artist.as_deref().unwrap_or("Unknown Artist"),
-                        track.title
-                    )))
-                })
+                .map(|row| ListItem::new(Line::from(row.clone())))
                 .collect()
         };
 
         let mut state = ListState::default();
-        state.select(if queue_tracks.is_empty() {
+        state.select(if queue_len == 0 {
             None
         } else {
             Some(self.queue_selected)
@@ -251,7 +225,7 @@ impl UiState {
         f.render_widget(paragraph, area);
     }
 
-    fn draw_visualizer_panel(&self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
+    fn draw_visualizer_panel(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
         match self.visualizer_mode {
             VisualizerMode::Cava => self.draw_cava_visualizer(f, area, app),
             VisualizerMode::Clock => self.draw_clock_visualizer(f, area),
@@ -259,104 +233,141 @@ impl UiState {
         }
     }
 
-    fn draw_cava_visualizer(&self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
-        let inner = area.inner(ratatui::layout::Margin {
-            vertical: 1,
-            horizontal: 1,
-        });
+    fn draw_cava_visualizer(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
+        let inner = self.visualizer_inner(area);
         let width = inner.width.max(1) as usize;
         let height = inner.height.max(1) as usize;
-        let bars = (width / 2).max(1);
-        let tick = self.visualizer_tick();
-        let position = app.playback_state().position_secs as f64;
-
-        let heights: Vec<usize> = (0..bars)
-            .map(|idx| {
-                let wave_a = ((tick / 180.0) + idx as f64 * 0.55 + position * 0.18).sin();
-                let wave_b = ((tick / 120.0) + idx as f64 * 0.21 + position * 0.09).cos();
-                let energy = ((wave_a + wave_b + 2.0) / 4.0).clamp(0.0, 1.0);
-                ((energy * height as f64).round() as usize).clamp(1, height)
-            })
-            .collect();
-
-        let mut lines = Vec::with_capacity(height + 1);
-        for row in (0..height).rev() {
-            let spans: Vec<Span<'_>> = heights
-                .iter()
-                .map(|bar_height| {
-                    if *bar_height > row {
-                        Span::styled("##", Style::default().fg(Color::Cyan))
-                    } else {
-                        Span::raw("  ")
-                    }
-                })
-                .collect();
-            lines.push(Line::from(spans));
+        let bars = ((width + 1) / 3).clamp(1, 40);
+        let tick_ms = self.visualizer_tick() as u128;
+        if self.cava_cached_levels.len() != bars
+            || tick_ms.saturating_sub(self.visualizer_last_update_ms) >= 33
+        {
+            let fresh = app.visualizer_levels(bars);
+            if self.cava_cached_levels.len() == fresh.len() {
+                for (idx, new_value) in fresh.iter().enumerate() {
+                    let old = self.cava_cached_levels[idx];
+                    let level = old.0 * 0.65 + new_value.0 * 0.35;
+                    let peak = new_value.1.max(old.1 * 0.92);
+                    self.cava_cached_levels[idx] = (level, peak);
+                }
+            } else {
+                self.cava_cached_levels = fresh;
+            }
+            self.visualizer_last_update_ms = tick_ms;
         }
+
+        let active_height = height.saturating_sub(1).max(1);
+
+        let mut lines = Vec::with_capacity(height);
+        for row in (0..active_height).rev() {
+            let mut row_text = String::with_capacity(bars * 3);
+            for (level, peak) in &self.cava_cached_levels {
+                let bar_height =
+                    ((level * active_height as f32).round() as usize).clamp(0, active_height);
+                let peak_height =
+                    ((peak * active_height as f32).round() as usize).clamp(0, active_height);
+
+                if peak_height == row + 1 && peak_height > 0 {
+                    row_text.push_str("▓▓ ");
+                } else if bar_height > row {
+                    row_text.push_str("██ ");
+                } else {
+                    row_text.push_str("   ");
+                }
+            }
+
+            lines.push(Line::from(vec![Span::styled(
+                row_text,
+                Style::default().fg(Color::Rgb(236, 236, 245)),
+            )]));
+        }
+
+        let baseline = "-  ".repeat(bars);
         lines.push(Line::from(vec![Span::styled(
-            "Alt+1 Cava  Alt+2 Clock  Alt+3 CMatrix",
-            Style::default().fg(Color::DarkGray),
+            baseline,
+            Style::default().fg(Color::Rgb(150, 150, 170)),
         )]));
 
         let paragraph = Paragraph::new(lines).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(" Visualizer [Cava] "),
+                .title(" Visualizer [Cava] ")
+                .border_style(Style::default().fg(Color::Rgb(178, 178, 210))),
         );
         f.render_widget(paragraph, area);
     }
 
     fn draw_clock_visualizer(&self, f: &mut ratatui::Frame<'_>, area: Rect) {
         let now = Local::now();
-        let lines = vec![
-            self.centered_line(area.width, "Clock Mode", Color::Yellow),
-            Line::default(),
-            self.centered_line(
+        let inner = self.visualizer_inner(area);
+        let available_rows = inner.height.max(1) as usize;
+
+        let mut clock_rows = self.big_clock_lines(&now.format("%H:%M:%S").to_string());
+        if clock_rows.len() > available_rows {
+            clock_rows = self.sample_rows(&clock_rows, available_rows);
+        }
+
+        let mut lines = Vec::new();
+        let can_show_date = available_rows >= clock_rows.len() + 2;
+        if can_show_date {
+            lines.push(self.centered_line(
                 area.width,
-                &now.format("%H:%M:%S").to_string(),
-                Color::White,
-            ),
-            self.centered_line(area.width, &now.format("%Y-%m-%d").to_string(), Color::Cyan),
-            Line::default(),
-            self.centered_line(area.width, "Alt+1 / Alt+2 / Alt+3", Color::DarkGray),
-        ];
+                &now.format("%A %Y-%m-%d").to_string(),
+                Color::Rgb(245, 185, 175),
+            ));
+            lines.push(Line::default());
+        }
+
+        for line in clock_rows {
+            lines.push(self.centered_line(area.width, &line, Color::Rgb(244, 184, 180)));
+        }
+
+        while lines.len() < available_rows {
+            lines.push(Line::default());
+        }
 
         let paragraph = Paragraph::new(lines).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(" Visualizer [Clock] "),
+                .title(" Visualizer [Clock] ")
+                .border_style(Style::default().fg(Color::Rgb(204, 156, 164))),
         );
         f.render_widget(paragraph, area);
     }
 
     fn draw_cmatrix_visualizer(&self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
-        let inner = area.inner(ratatui::layout::Margin {
-            vertical: 1,
-            horizontal: 1,
-        });
+        let inner = self.visualizer_inner(area);
         let width = inner.width.max(1) as usize;
         let height = inner.height.max(1) as usize;
         let tick = self.visualizer_tick() as usize;
         let position = app.playback_state().position_secs.max(0) as usize;
         let charset = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        let trail = 6usize;
+        let seed = self.track_seed(app) as usize;
 
         let mut lines = Vec::with_capacity(height);
         for row in 0..height {
             let mut spans = Vec::with_capacity(width);
             for col in 0..width {
-                let head = (tick / 2 + col * 5 + position) % (height + trail);
+                let speed = 1 + ((seed + col * 13) % 4);
+                let trail = 4 + ((seed / 7 + col * 3) % 8);
+                let offset = (seed / 11 + col * 17 + position * 3) % (height + trail + 8);
+                let head = (tick / speed + offset) % (height + trail + 8);
+
                 if row <= head && head - row < trail {
-                    let index = (tick + row * 11 + col * 7 + position) % charset.len();
-                    let ch = charset[index] as char;
-                    let color = if row == head {
+                    let glyph_index =
+                        (seed + tick + row * 19 + col * 23 + position) % charset.len();
+                    let ch = charset[glyph_index] as char;
+                    let distance = head - row;
+                    let color = if distance == 0 {
                         Color::White
-                    } else if head - row <= 2 {
-                        Color::Green
+                    } else if distance <= 2 {
+                        Color::Rgb(120, 255, 120)
                     } else {
-                        Color::DarkGray
+                        Color::Rgb(0, 120, 0)
                     };
                     spans.push(Span::styled(ch.to_string(), Style::default().fg(color)));
+                } else if (seed + tick + row * 5 + col * 3).is_multiple_of(37) {
+                    spans.push(Span::styled("·", Style::default().fg(Color::Rgb(0, 60, 0))));
                 } else {
                     spans.push(Span::raw(" "));
                 }
@@ -367,7 +378,8 @@ impl UiState {
         let paragraph = Paragraph::new(lines).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(" Visualizer [CMatrix] "),
+                .title(" Visualizer [CMatrix] ")
+                .border_style(Style::default().fg(Color::Rgb(0, 180, 0))),
         );
         f.render_widget(paragraph, area);
     }
@@ -379,9 +391,77 @@ impl UiState {
             .as_millis() as f64
     }
 
+    fn visualizer_inner(&self, area: Rect) -> Rect {
+        area.inner(ratatui::layout::Margin {
+            vertical: 1,
+            horizontal: 1,
+        })
+    }
+
+    fn track_seed(&self, app: &App) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        if let Some(track) = app.current_track() {
+            track.id.hash(&mut hasher);
+            track.path.hash(&mut hasher);
+            track.title.hash(&mut hasher);
+            track.artist.hash(&mut hasher);
+            track.album.hash(&mut hasher);
+            track.duration_secs.hash(&mut hasher);
+        } else {
+            app.playback_state().position_secs.hash(&mut hasher);
+        }
+        hasher.finish()
+    }
+
+    fn big_clock_lines(&self, text: &str) -> Vec<String> {
+        const HEIGHT: usize = 5;
+        let mut lines = vec![String::new(); HEIGHT];
+
+        for ch in text.chars() {
+            let glyph = match ch {
+                '0' => ["███", "█ █", "█ █", "█ █", "███"],
+                '1' => [" ██", "███", " ██", " ██", "███"],
+                '2' => ["███", "  █", "███", "█  ", "███"],
+                '3' => ["███", "  █", "███", "  █", "███"],
+                '4' => ["█ █", "█ █", "███", "  █", "  █"],
+                '5' => ["███", "█  ", "███", "  █", "███"],
+                '6' => ["███", "█  ", "███", "█ █", "███"],
+                '7' => ["███", "  █", "  █", "  █", "  █"],
+                '8' => ["███", "█ █", "███", "█ █", "███"],
+                '9' => ["███", "█ █", "███", "  █", "███"],
+                ':' => ["   ", " █ ", "   ", " █ ", "   "],
+                _ => ["   ", "   ", "   ", "   ", "   "],
+            };
+
+            for (row, part) in glyph.iter().enumerate() {
+                lines[row].push_str(part);
+                lines[row].push(' ');
+            }
+        }
+
+        lines
+    }
+
+    fn sample_rows(&self, rows: &[String], target: usize) -> Vec<String> {
+        if target == 0 {
+            return Vec::new();
+        }
+        if rows.len() <= target {
+            return rows.to_vec();
+        }
+
+        (0..target)
+            .map(|idx| {
+                let src = idx * rows.len() / target;
+                rows[src].clone()
+            })
+            .collect()
+    }
+
     fn centered_line(&self, width: u16, text: &str, color: Color) -> Line<'static> {
         let available = width.saturating_sub(2) as usize;
-        let left_pad = available.saturating_sub(text.len()) / 2;
+        let text_width = text.chars().count();
+        let left_pad = available.saturating_sub(text_width) / 2;
         let mut content = String::new();
         content.push_str(&" ".repeat(left_pad));
         content.push_str(text);

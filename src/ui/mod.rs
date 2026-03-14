@@ -16,7 +16,7 @@ use ratatui::backend::CrosstermBackend;
 
 use crate::app::App;
 
-use self::state::UiState;
+use self::state::{UiState, VisualizerMode};
 
 fn record_first_error<E>(slot: &mut Option<anyhow::Error>, result: std::result::Result<(), E>)
 where
@@ -45,7 +45,13 @@ pub fn run(app: &mut App) -> Result<()> {
             app.refresh_playback_position()?;
             terminal.draw(|frame| ui.draw(frame, app))?;
 
-            if event::poll(Duration::from_millis(50))?
+            let poll_ms = if matches!(ui.visualizer_mode, VisualizerMode::Cava) {
+                16
+            } else {
+                33
+            };
+
+            if event::poll(Duration::from_millis(poll_ms))?
                 && let Event::Key(key) = event::read()?
                 && ui.handle_key(app, key)?
             {
@@ -62,7 +68,7 @@ pub fn run(app: &mut App) -> Result<()> {
         execute!(terminal.backend_mut(), LeaveAlternateScreen),
     );
     record_first_error(&mut first_error, terminal.show_cursor());
-    record_first_error(&mut first_error, app.persist_playback_state());
+    record_first_error(&mut first_error, app.persist_playback_state_now());
 
     match first_error {
         Some(error) => Err(error),

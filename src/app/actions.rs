@@ -1,6 +1,6 @@
 use std::collections::{HashSet, hash_map::DefaultHasher};
 use std::hash::{Hash, Hasher};
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
 
@@ -33,6 +33,8 @@ fn shuffle_vec(ids: &mut [i64], current_id: Option<i64>) {
     }
 }
 
+const PLAYBACK_PERSIST_DEBOUNCE: Duration = Duration::from_millis(250);
+
 impl App {
     pub fn boot() -> Result<Self> {
         let config = crate::core::config::Config::load_or_create()?;
@@ -54,9 +56,14 @@ impl App {
             player,
             session: AppSession {
                 tracks,
+                tracks_version: 1,
                 queue,
+                queue_version: 1,
                 playback_state,
             },
+            playback_state_dirty: false,
+            last_persisted_playback_state: None,
+            last_persisted_at: None,
         };
 
         app.normalize_queue()?;
@@ -68,9 +75,14 @@ impl App {
         ui::run(self)
     }
 
-    pub fn persist_playback_state(&self) -> Result<()> {
-        self.storage
-            .save_playback_state(&self.session.playback_state)
+    pub fn persist_playback_state(&mut self) -> Result<()> {
+        self.playback_state_dirty = true;
+        self.flush_playback_state(false)
+    }
+
+    pub fn persist_playback_state_now(&mut self) -> Result<()> {
+        self.playback_state_dirty = true;
+        self.flush_playback_state(true)
     }
 
     pub fn scan_now(&mut self) -> Result<()> {
@@ -90,7 +102,7 @@ impl App {
             .iter()
             .find(|track| track.id == track_id)
         {
-            self.player.play_file(&track.path, 0)?;
+            self.player.play_file(&track.path, track.mtime, 0)?;
             self.session.playback_state.current_track_id = Some(track_id);
             self.session.playback_state.position_secs = 0;
             self.storage.increment_play_count(track_id)?;
@@ -171,7 +183,7 @@ impl App {
             && let Some(track) = self.session.tracks.iter().find(|t| t.id == track_id)
         {
             let start_at = self.session.playback_state.position_secs;
-            self.player.play_file(&track.path, start_at)?;
+            self.player.play_file(&track.path, track.mtime, start_at)?;
             return Ok(false);
         }
 
@@ -184,6 +196,8 @@ impl App {
     }
 
     pub fn refresh_playback_position(&mut self) -> Result<()> {
+        self.player.poll_analysis_results();
+
         if self.player.consume_track_finished() {
             let previous_track = self.session.playback_state.current_track_id;
             self.next_track()?;
@@ -198,6 +212,7 @@ impl App {
         }
 
         self.session.playback_state.position_secs = self.player.current_position_secs();
+        self.flush_playback_state(false)?;
         Ok(())
     }
 
@@ -219,6 +234,10 @@ impl App {
 
     pub fn volume_percent(&self) -> u8 {
         self.player.volume_percent()
+    }
+
+    pub fn visualizer_levels(&self, bars: usize) -> Vec<(f32, f32)> {
+        self.player.visualizer_levels(bars)
     }
 
     pub fn toggle_shuffle(&mut self) -> Result<bool> {
@@ -264,12 +283,20 @@ impl App {
             .and_then(|id| self.session.tracks.iter().find(|track| track.id == id))
     }
 
-    pub fn queue_tracks(&self) -> Vec<&Track> {
-        self.session
-            .queue
-            .iter()
-            .filter_map(|id| self.track_by_id(*id))
-            .collect()
+    pub fn queue_len(&self) -> usize {
+        self.session.queue.len()
+    }
+
+    pub fn queue_ids(&self) -> &[i64] {
+        &self.session.queue
+    }
+
+    pub fn tracks_version(&self) -> u64 {
+        self.session.tracks_version
+    }
+
+    pub fn queue_version(&self) -> u64 {
+        self.session.queue_version
     }
 
     pub fn tracks(&self) -> &[Track] {
@@ -285,14 +312,16 @@ impl App {
         if self.session.playback_state.shuffle_enabled {
             shuffle_vec(&mut ids, self.session.playback_state.current_track_id);
         }
-        self.session.queue = ids.clone();
+        self.session.queue = ids;
         self.persist_queue()?;
         Ok(())
     }
 
     fn reload_session_state(&mut self) -> Result<()> {
         self.session.tracks = self.storage.load_tracks()?;
+        self.session.tracks_version = self.session.tracks_version.saturating_add(1);
         self.session.queue = self.storage.load_queue()?;
+        self.session.queue_version = self.session.queue_version.saturating_add(1);
         self.normalize_queue()?;
 
         let current_track_missing = self
@@ -339,13 +368,45 @@ impl App {
     }
 
     fn persist_queue(&mut self) -> Result<()> {
-        self.storage.replace_queue(&self.session.queue)
+        self.storage.replace_queue(&self.session.queue)?;
+        self.session.queue_version = self.session.queue_version.saturating_add(1);
+        Ok(())
     }
 
-    fn track_by_id(&self, track_id: i64) -> Option<&Track> {
+    pub fn track_by_id(&self, track_id: i64) -> Option<&Track> {
         self.session
             .tracks
             .iter()
             .find(|track| track.id == track_id)
+    }
+
+    fn flush_playback_state(&mut self, force: bool) -> Result<()> {
+        if !self.playback_state_dirty {
+            return Ok(());
+        }
+
+        let unchanged = self
+            .last_persisted_playback_state
+            .as_ref()
+            .is_some_and(|last| *last == self.session.playback_state);
+        if unchanged {
+            self.playback_state_dirty = false;
+            return Ok(());
+        }
+
+        if !force
+            && self
+                .last_persisted_at
+                .is_some_and(|at| at.elapsed() < PLAYBACK_PERSIST_DEBOUNCE)
+        {
+            return Ok(());
+        }
+
+        self.storage
+            .save_playback_state(&self.session.playback_state)?;
+        self.last_persisted_playback_state = Some(self.session.playback_state.clone());
+        self.last_persisted_at = Some(std::time::Instant::now());
+        self.playback_state_dirty = false;
+        Ok(())
     }
 }

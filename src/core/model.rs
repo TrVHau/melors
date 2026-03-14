@@ -68,7 +68,7 @@ impl fmt::Display for RepeatMode {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlaybackState {
     pub current_track_id: Option<i64>,
     pub position_secs: i64,

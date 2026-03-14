@@ -12,15 +12,23 @@ pub fn search_tracks<'a>(tracks: &'a [Track], keyword: &str) -> Vec<&'a Track> {
     let mut scored: Vec<(&Track, i64)> = tracks
         .iter()
         .filter_map(|track| {
-            let haystack = format!(
-                "{} {} {}",
-                track.title,
-                track.artist.as_deref().unwrap_or_default(),
-                track.album.as_deref().unwrap_or_default()
-            );
-            matcher
-                .fuzzy_match(&haystack, keyword)
-                .map(|score| (track, score))
+            let title_score = matcher.fuzzy_match(&track.title, keyword);
+            let artist_score = track
+                .artist
+                .as_deref()
+                .and_then(|artist| matcher.fuzzy_match(artist, keyword));
+            let album_score = track
+                .album
+                .as_deref()
+                .and_then(|album| matcher.fuzzy_match(album, keyword));
+
+            let score = title_score
+                .into_iter()
+                .chain(artist_score)
+                .chain(album_score)
+                .max();
+
+            score.map(|value| (track, value))
         })
         .collect();
 

@@ -107,7 +107,7 @@ impl UiState {
                     && let Some(track_id) = app.remove_queue_index(self.queue_selected)?
                 {
                     self.status = format!("Removed from queue #{}", track_id);
-                    let queue_len = app.queue_tracks().len();
+                    let queue_len = app.queue_len();
                     self.queue_selected = self.queue_selected.min(queue_len.saturating_sub(1));
                 }
             }
