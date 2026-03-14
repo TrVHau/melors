@@ -257,4 +257,12 @@ impl Storage {
         )?;
         Ok(())
     }
+
+    pub fn rename_track(&self, track_id: i64, new_title: &str, new_path: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE tracks SET title=?1, path=?2 WHERE id=?3",
+            params![new_title, new_path, track_id],
+        )?;
+        Ok(())
+    }
 }

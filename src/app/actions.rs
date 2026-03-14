@@ -1,5 +1,6 @@
 use std::collections::{HashSet, hash_map::DefaultHasher};
 use std::hash::{Hash, Hasher};
+use std::path::Path;
 use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
@@ -378,6 +379,30 @@ impl App {
             .tracks
             .iter()
             .find(|track| track.id == track_id)
+    }
+
+    pub fn rename_track(&mut self, track_id: i64, new_title: &str) -> Result<()> {
+        let (old_path, new_path) = {
+            let track = match self.track_by_id(track_id) {
+                Some(t) => t,
+                None => return Ok(()),
+            };
+            let old_path = track.path.clone();
+            let ext = old_path.extension().and_then(|e| e.to_str()).unwrap_or("");
+            let new_filename = if ext.is_empty() {
+                new_title.to_string()
+            } else {
+                format!("{}.{}", new_title, ext)
+            };
+            let new_path = old_path
+                .parent()
+                .unwrap_or(Path::new("."))
+                .join(&new_filename);
+            (old_path, new_path)
+        };
+        std::fs::rename(&old_path, &new_path)?;
+        self.storage.rename_track(track_id, new_title, &new_path.to_string_lossy())?;
+        self.reload_session_state()
     }
 
     fn flush_playback_state(&mut self, force: bool) -> Result<()> {

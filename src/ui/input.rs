@@ -36,6 +36,10 @@ impl UiState {
             return self.handle_search_input(app, key);
         }
 
+        if self.mode == InputMode::Rename {
+            return self.handle_rename_input(app, key);
+        }
+
         match key.code {
             KeyCode::Char('q') => return Ok(true),
             KeyCode::BackTab => self.focus_left(),
@@ -130,9 +134,51 @@ impl UiState {
                     self.queue_selected = self.queue_selected.min(queue_len.saturating_sub(1));
                 }
             }
+            KeyCode::Char('m') => {
+                if let Some(track_id) = self.selected_track_id(app)
+                    && let Some(track) = app.track_by_id(track_id)
+                {
+                    let current_title = track.title.clone();
+                    self.enter_rename_mode(track_id, &current_title);
+                    self.status = String::from("Rename mode — Enter to confirm, Esc to cancel");
+                }
+            }
             _ => {}
         }
 
+        Ok(false)
+    }
+
+    fn handle_rename_input(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
+        match key.code {
+            KeyCode::Esc => {
+                self.exit_rename_mode();
+                self.status = String::from("Rename cancelled");
+            }
+            KeyCode::Enter => {
+                let new_title = self.rename_input.trim().to_string();
+                if let Some(track_id) = self.rename_track_id
+                    && !new_title.is_empty()
+                {
+                    match app.rename_track(track_id, &new_title) {
+                        Ok(()) => self.status = format!("Renamed #{} → {}", track_id, new_title),
+                        Err(e) => self.status = format!("Rename failed: {}", e),
+                    }
+                }
+                self.exit_rename_mode();
+            }
+            KeyCode::Backspace => {
+                self.rename_input.pop();
+            }
+            KeyCode::Char(c) => {
+                if !key.modifiers.contains(KeyModifiers::CONTROL)
+                    && !key.modifiers.contains(KeyModifiers::ALT)
+                {
+                    self.rename_input.push(c);
+                }
+            }
+            _ => {}
+        }
         Ok(false)
     }
 

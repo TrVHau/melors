@@ -1,25 +1,22 @@
-# melors docs
+# melors — Documentation
 
-This folder contains project documentation for `melors` (formerly `mysic`).
+This folder contains the technical and product documentation for `melors`.
 
-## Quick start reading order
+## Reading Order
 
-1. `project-overview.md` - what the project is and who it is for
-2. `mvp-spec.md` - exact MVP scope and behavior
-3. `architecture.md` - modules, data flow, and storage model
-4. `ux-keymap.md` - TUI layout and keyboard interactions
-5. `roadmap.md` - post-MVP direction
-6. `dev-setup.md` - local development and implementation notes
+| File                                       | Contents                                         |
+| ------------------------------------------ | ------------------------------------------------ |
+| [project-overview.md](project-overview.md) | What melors is, who it is for, design principles |
+| [architecture.md](architecture.md)         | Module map, data flow, storage schema            |
+| [ux-keymap.md](ux-keymap.md)               | TUI layout, keybindings, interaction model       |
+| [roadmap.md](roadmap.md)                   | What's shipped and what's planned next           |
+| [dev-setup.md](dev-setup.md)               | Setting up a local dev environment               |
 
-## Product identity
+## Quick Facts
 
-- New project name: `melors`
-- Old working name: `mysic`
-- Product type: local-first terminal music player for personal MP3 libraries
-
-## Design principles
-
-- Local-first
-- Keyboard-first
-- Terminal-native
-- Privacy-first (no telemetry)
+- **Binary**: `melors`
+- **Language**: Rust (edition 2024)
+- **TUI**: `ratatui` + `crossterm`
+- **Audio**: `rodio`
+- **Storage**: `rusqlite` (bundled SQLite)
+- **Minimum Rust**: stable ≥ 1.85

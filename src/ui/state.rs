@@ -15,6 +15,7 @@ pub enum FocusPanel {
 pub enum InputMode {
     Normal,
     Search,
+    Rename,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,6 +42,8 @@ pub struct UiState {
     pub visualizer_last_update_ms: u128,
     pub cava_cached_levels: Vec<(f32, f32)>,
     pub search_input: String,
+    pub rename_input: String,
+    pub rename_track_id: Option<i64>,
     pub library_selected: usize,
     pub queue_selected: usize,
     pub status: String,
@@ -66,6 +69,8 @@ impl UiState {
             visualizer_last_update_ms: 0,
             cava_cached_levels: Vec::new(),
             search_input: String::new(),
+            rename_input: String::new(),
+            rename_track_id: None,
             library_selected: 0,
             queue_selected: 0,
             status: String::from("Ready"),
@@ -99,6 +104,18 @@ impl UiState {
         self.search_input.clear();
         self.library_selected = 0;
         self.invalidate_library_cache();
+    }
+
+    pub fn enter_rename_mode(&mut self, track_id: i64, current_title: &str) {
+        self.mode = InputMode::Rename;
+        self.rename_track_id = Some(track_id);
+        self.rename_input = current_title.to_string();
+    }
+
+    pub fn exit_rename_mode(&mut self) {
+        self.mode = InputMode::Normal;
+        self.rename_input.clear();
+        self.rename_track_id = None;
     }
 
     fn is_filtering_library(&self) -> bool {

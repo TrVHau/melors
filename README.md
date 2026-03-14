@@ -1,119 +1,148 @@
 # melors
 
-A keyboard-driven terminal music player for local MP3 libraries, written in Rust.
+> A keyboard-driven terminal music player for local MP3 libraries, written in Rust.
 
 ```
- > * #0042 Tame Impala - Let It Happen
-   * #0089 Radiohead - Reckoner
-     #0103 Mac DeMarco - Chamber of Reflection
-     #0211 LCD Soundsystem - All My Friends
+┌─ Library [Normal] ───────────────────────────────┐ ┌─ Queue ─────────────────┐
+│-> * #0042 Tame Impala - Let It Happen            │ │  #0042 Let It Happen    │
+│   * #0089 Radiohead - Reckoner                   │ │  #0089 Reckoner         │
+│     #0103 Mac DeMarco - Chamber of Reflection    │ │  #0103 Chamber of...    │
+│     #0211 LCD Soundsystem - All My Friends       │ │                         │
+├─ Now Playing ────────────────────────────────────┤ ├─ Visualizer [Cava] ─────┤
+│ Track: Tame Impala - Let It Happen               │ │ ██   ██ ▓▓ ██           │
+│ Album: Currents | Repeat: off | Shuffle: Off     │ │ ██ ██ ██ ██ ██ ██       │
+│ Volume: 80%  Status: Playing                     │ │ ████████████████████    │
+├─ Progress ───────────────────────────────────────┤ │ -  -  -  -  -  -  -    │
+│ [████████████░░░░░░░░░░░░░░░ 142s / 467s       ] │ └─────────────────────────┘
+└──────────────────────────────────────────────────┘
 ```
 
 ## Features
 
-- Scans a local MP3 folder automatically on startup
-- Reads ID3 tags (title, artist, album) with filename fallback
-- Fuzzy search across tracks, artists, and albums
-- Full keyboard control — no mouse required
-- Remembers playback position, queue, and repeat mode between sessions
-- Favorites and play count tracking
-- Zero configuration needed out of the box
+- **Local-first** — scans `~/Music/melors/` on startup; no cloud, no accounts
+- **Full keyboard control** — every action has a key binding, no mouse required
+- **Fuzzy search** — matches across title, artist, and album in real time
+- **Session persistence** — queue, playback position, repeat mode, and shuffle resume across restarts
+- **Favorites & play counts** — mark tracks and track how often you play them
+- **Inline rename** — rename track files directly from the TUI
+- **Visualizer panel** — three built-in modes: spectrum bars (Cava), big clock, and CMatrix rain
+- **Volume control** — per-session volume adjustment
+- **Zero config to start** — sane defaults, directories created automatically
 
 ## Requirements
 
-- Rust (stable)
-- A working audio output device (ALSA on Linux, CoreAudio on macOS)
+- Rust stable (≥ 1.85)
+- Linux: ALSA headers (`libasound2-dev` on Debian/Ubuntu)
+- macOS: CoreAudio (no extra packages needed)
 
 ## Install
 
 ```bash
 git clone https://github.com/TrVHau/melors
 cd melors
+cargo build --release
+# binary is at target/release/melors
+```
+
+Or run directly:
+
+```bash
 cargo run --release
 ```
 
-On first launch the app creates all directories it needs, including the music folder:
+## Paths
+
+All directories are created on first launch — nothing to configure upfront.
 
 | Purpose      | Path                              |
 | ------------ | --------------------------------- |
 | Music folder | `~/Music/melors/`                 |
 | Config       | `~/.config/melors/config.toml`    |
 | Database     | `~/.local/share/melors/db.sqlite` |
-| Cache        | `~/.cache/melors/`                |
 
-Drop your `.mp3` files into `~/Music/melors/` and launch the app. That's it.
+Drop `.mp3` files into `~/Music/melors/` and start the app. Press `r` at any time to rescan.
 
-## Change The Music Folder
+## Configuration
 
-Open `~/.config/melors/config.toml` and set `music_dir` to any path you want:
+`~/.config/melors/config.toml` is created with defaults on first run:
 
 ```toml
-music_dir = "/home/you/Music"
+music_dir = "/home/you/Music/melors"
 ```
 
-The app rescans this folder every time it starts and whenever you press `r`.
+Change `music_dir` to any path containing your MP3 collection.
 
 ## Keybindings
 
 ### Navigation
 
-| Key         | Action                            |
-| ----------- | --------------------------------- |
-| `↓`         | Move selection down               |
-| `↑`         | Move selection up                 |
-| `Shift+Tab` | Move focus left                   |
-| `Tab`       | Move focus right                  |
-| `Enter`     | Play selected track or queue item |
-| `q`         | Quit                              |
+| Key         | Action                             |
+| ----------- | ---------------------------------- |
+| `↑` / `↓`   | Move selection up / down           |
+| `Tab`       | Focus next panel (Library → Queue) |
+| `Shift+Tab` | Focus previous panel               |
+| `Enter`     | Play selected track or queue item  |
+| `q`         | Quit                               |
 
 ### Playback
 
-| Key                   | Action                       |
-| --------------------- | ---------------------------- |
-| `Space`               | Play / pause                 |
-| `n`                   | Next track                   |
-| `p`                   | Previous track               |
-| `←` / `→`             | Seek −5s / +5s               |
-| `Shift+←` / `Shift+→` | Seek −10s / +10s             |
-| `]`                   | Volume up                    |
-| `[`                   | Volume down                  |
-| `Alt+1`               | Switch to Cava visualizer    |
-| `Alt+2`               | Switch to Clock visualizer   |
-| `Alt+3`               | Switch to CMatrix visualizer |
+| Key                   | Action           |
+| --------------------- | ---------------- |
+| `Space`               | Play / pause     |
+| `n`                   | Next track       |
+| `p`                   | Previous track   |
+| `←` / `→`             | Seek −5s / +5s   |
+| `Shift+←` / `Shift+→` | Seek −10s / +10s |
+| `[` / `]`             | Volume down / up |
 
-### Library
+### Library & Queue
 
-| Key | Action                            |
-| --- | --------------------------------- |
-| `s` | Open search                       |
-| `f` | Toggle favorite on selected track |
-| `a` | Add selected track to queue       |
-| `x` | Remove selected queue item        |
-| `r` | Rescan library from disk          |
-| `e` | Cycle repeat mode                 |
-| `u` | Toggle shuffle                    |
+| Key | Action                              |
+| --- | ----------------------------------- |
+| `s` | Open search                         |
+| `f` | Toggle favorite on selected track   |
+| `a` | Add selected track to queue         |
+| `x` | Remove selected item from queue     |
+| `m` | Rename selected track               |
+| `e` | Cycle repeat mode (off / one / all) |
+| `u` | Toggle shuffle                      |
+| `r` | Rescan library from disk            |
+
+### Visualizer
+
+| Key     | Mode          |
+| ------- | ------------- |
+| `Alt+1` | Spectrum bars |
+| `Alt+2` | Big clock     |
+| `Alt+3` | CMatrix rain  |
 
 ## Search
 
-Press `s` to enter search mode. Type a keyword — results update as you type.
+Press `s` to enter search mode. Results filter in real time as you type.
 
-- `↑` / `↓` — move through results
-- `Enter` — play the selected result
-- `Backspace` — delete last character
-- `Esc` — exit search, clear query, and return to full library
-- `Enter` also clears the query after playing a result
+| Key         | Action                                   |
+| ----------- | ---------------------------------------- |
+| `↑` / `↓`   | Navigate results                         |
+| `Enter`     | Play selected result and exit search     |
+| `Backspace` | Delete last character                    |
+| `Esc`       | Cancel search and return to full library |
 
-Search matches across track title, artist, and album using fuzzy scoring.
+Search scores across track title, artist, and album using fuzzy matching.
 
-## Visualizer Area
+## Rename
 
-The lower-right panel now supports three code-native modes:
+Press `m` on any track in the Library to rename it. The progress bar area becomes
+a rename input field, prefilled with the current title.
 
-- `Cava` via `Alt+1`
-- `Clock` via `Alt+2`
-- `CMatrix` via `Alt+3`
+| Key         | Action                                                      |
+| ----------- | ----------------------------------------------------------- |
+| Any key     | Edit the name                                               |
+| `Backspace` | Delete last character                                       |
+| `Enter`     | Confirm — renames the file on disk and updates the database |
+| `Esc`       | Cancel, no changes made                                     |
 
-These modes are rendered directly in the TUI code, not embedded from external tools.
+The file is renamed in-place (same directory, same extension, new stem), and the
+library reloads automatically.
 
 ## License
 

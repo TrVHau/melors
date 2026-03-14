@@ -1,57 +1,41 @@
 # Roadmap
 
-## Naming transition
+## Shipped (v0.1)
 
-Project identity is moving from `mysic` to `melors`.
+- MP3 library scanning with incremental mtime-based updates
+- ID3 metadata extraction with filename-stem fallback
+- Library list with current-track marker and favorite indicator
+- Playback: play / pause / next / prev / seek / volume
+- Fuzzy search across title, artist, and album (real-time)
+- Queue with persistence across sessions
+- Favorites and play-count tracking
+- Repeat modes: off / one / all
+- Shuffle
+- Session persistence: queue, position, mode all restored on relaunch
+- Inline rename: rename track files from within the TUI
+- Visualizer panel with three modes:
+  - Spectrum bars (real FFT via rustfft)
+  - Big block-glyph clock
+  - CMatrix character rain
+- Render caches with version-counter invalidation
+- Debounced SQLite writes (250 ms threshold)
 
-Planned rename scope:
+## Near Term (v0.2)
 
-- crate name
-- binary name
-- config/data/cache directory names
-- docs and in-app branding
+- **Playlist management** — create, edit, and play named playlists
+- **Statistics view** — most-played tracks, recently played list
+- **File watcher** — auto-reload library when files change on disk
+- **ID3 tag write-back** — persist rename to the file's ID3 title tag
 
-## Phase 0 - Foundation (current)
+## Medium Term (v0.3+)
 
-- finalize product and technical spec
-- set up module skeleton
-- define DB schema + migration strategy
-- baseline TUI frame and input loop
+- **M3U import/export** — interop with other players
+- **Advanced search syntax** — `artist:`, `album:`, `year:` filters
+- **Theme system** — configurable colors
+- **Optional keymap customization** — rebind any key in config
 
-## Phase 1 - MVP
+## Non-Goals
 
-- MP3 scanner (full first run + incremental updates)
-- metadata extraction + fallback rules
-- library list rendering
-- playback controls (play/pause/next/prev/seek)
-- queue persistence and resume state
-- `/keyword` fuzzy search
-- favorites, play count, last played
-- DB backup + rebuild path on corruption
-
-Exit criteria:
-
-- first interactive screen in under 300ms (target)
-- stable playback across typical local libraries
-- no blocking UI stutters during normal operations
-
-## Phase 2 - Post-MVP (v1.1)
-
-- built-in visualizer (default 48 bars, 30 FPS)
-- playlist management UX
-- statistics views (most played/recent)
-- optional file watcher
-- theme customization
-
-## Phase 3 - UX expansion (v1.2+)
-
-- M3U import/export
-- advanced search syntax
-- optional keymap customization
-- smarter rename/move reconciliation
-
-## Non-goals
-
-- cloud account integration
-- streaming service integration
-- telemetry collection
+- Cloud/streaming service integration
+- Telemetry or usage analytics
+- GUI mode

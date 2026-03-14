@@ -2,44 +2,45 @@
 
 ## What is melors?
 
-`melors` is a fast, elegant, local-first terminal music cockpit for personal MP3 libraries.
+`melors` is a fast, local-first terminal music player for personal MP3 libraries. It runs entirely
+in the terminal, requires no cloud account, and is controlled fully from the keyboard.
 
-It is built for terminal-centric users (especially Linux users) who prefer keyboard workflows and minimal UI.
+It is built for Linux and macOS users who prefer keyboard-centric workflows and want a polished TUI
+rather than a plain CLI.
 
-## Problem statement
+## Problem
 
-Most music players are either:
+Most music players are either GUI-heavy and mouse-oriented, cloud/streaming-dependent, or too
+minimal to be daily-driver quality. `melors` fills the gap: a proper TUI player that treats local
+files and keyboard navigation as first-class concerns.
 
-- GUI-heavy and mouse-oriented
-- cloud/streaming dependent
-- not optimized for terminal workflows
+## Target Users
 
-`melors` solves this by providing a keyboard-native TUI for local music playback.
+- Linux desktop users who live in the terminal
+- Keyboard-first power users
+- People with local MP3 collections who avoid streaming services
+- Privacy-focused users who do not want telemetry or accounts
 
-## Target users
+## Design Principles
 
-- Linux desktop users
-- keyboard-first power users
-- users with local MP3 collections
-- privacy-focused users who do not want cloud accounts
+1. **Local-first** — all data stays on the user's machine.
+2. **Keyboard-first** — every action has a key binding; mouse never required.
+3. **Terminal-native** — polished TUI with multiple panels and a live visualizer.
+4. **Privacy-first** — no telemetry, no network calls, no accounts.
+5. **Zero config to start** — sane defaults; required directories created automatically.
 
-## Core product principles
+## Default Paths
 
-1. Local-first: all files stay on user machine.
-2. Keyboard-first: full navigation without mouse.
-3. Terminal-native: polished TUI, not plain CLI.
-4. Privacy-first: no telemetry in MVP.
+| Purpose      | Path                              |
+| ------------ | --------------------------------- |
+| Music folder | `~/Music/melors/`                 |
+| Config       | `~/.config/melors/config.toml`    |
+| Database     | `~/.local/share/melors/db.sqlite` |
 
-## Defaults and paths
+All paths are configurable via `config.toml`.
 
-- Music directory: `~/Music/melors`
-- Config file: `~/.config/melors/config.toml`
-- SQLite database: `~/.local/share/melors/db.sqlite`
-- Cache: `~/.cache/melors/`
+## Performance Targets
 
-## Success criteria
-
-- First screen interactive in under 300ms
-- stable local MP3 playback
-- smooth keyboard navigation
-- predictable resume behavior between sessions
+- First interactive frame: < 300 ms after launch
+- UI frame budget: ≤ 16 ms (60 fps capable)
+- Incremental scan: ≥ 1 000 tracks / second

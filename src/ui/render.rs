@@ -100,6 +100,7 @@ impl UiState {
         let mode_title = match self.mode {
             InputMode::Normal => "Normal",
             InputMode::Search => "Search",
+            InputMode::Rename => "Rename",
         };
 
         let block = Block::default()
@@ -501,6 +502,12 @@ impl UiState {
 
         let label = if self.mode == InputMode::Search {
             format!("/{}", self.search_input)
+        } else if self.mode == InputMode::Rename {
+            let track_id_label = self
+                .rename_track_id
+                .map(|id| format!("#{} ", id))
+                .unwrap_or_default();
+            format!("Rename {}→ {}_", track_id_label, self.rename_input)
         } else {
             format!(
                 "{}s / {}s",

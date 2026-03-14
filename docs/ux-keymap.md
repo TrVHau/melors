@@ -1,72 +1,109 @@
-# UX And Keymap
+# UX and Keymap
 
-## Layout (MVP)
+## Panel Layout
 
-Main areas:
+```
+┌───────────────────────────────────────────┐ ┌─────────────────────┐
+│ Library [Normal / Search / Rename]      │ │ Queue                 │
+│ (track list, scrollable)                │ │ (playback queue)      │
+├───────────────────────────────────────────┤ ├─────────────────────┤
+│ Now Playing                             │ │ Visualizer            │
+│ (track, album, volume, status)          │ │ [Cava / Clock / CMatrix] │
+├───────────────────────────────────────────┤ │                       │
+│ Progress (or search / rename input)     │ │                       │
+└───────────────────────────────────────────┘ └─────────────────────┘
+```
 
-- left sidebar (sections/navigation)
-- main content list (library/search results)
-- now playing area
-- bottom progress bar
+The progress bar row doubles as an input area: it shows the search query during
+Search mode and the rename input during Rename mode.
 
-Behavior on small terminal:
+## Input Modes
 
-- prioritize metadata + progress visibility
-- collapse non-critical sections first
+| Mode     | Trigger         | Description                                |
+| -------- | --------------- | ------------------------------------------ |
+| `Normal` | default / `Esc` | Browse and control playback                |
+| `Search` | `s`             | Type a query; library filters in real time |
+| `Rename` | `m` on a track  | Edit the selected track's filename stem    |
 
-## Interaction principles
+## Keybindings
 
-- all core actions must be keyboard-accessible
-- no mouse required
-- predictable navigation state
-- low-latency feedback on keypress
+### Global (all modes)
 
-## Confirmed keys
+| Key     | Action                      |
+| ------- | --------------------------- |
+| `Alt+1` | Visualizer: Spectrum (Cava) |
+| `Alt+2` | Visualizer: Clock           |
+| `Alt+3` | Visualizer: CMatrix rain    |
 
-Navigation and app flow:
+### Normal mode
 
-- `Up` / `Down`: move up/down list
-- `Shift+Tab` / `Tab`: move between panels
-- `Enter`: select/open
-- `q`: exit app
+#### Navigation
 
-Playback:
+| Key         | Action                           |
+| ----------- | -------------------------------- |
+| `↑` / `↓`   | Move selection up / down         |
+| `Tab`       | Focus next panel                 |
+| `Shift+Tab` | Focus previous panel             |
+| `Enter`     | Play selected track / queue item |
+| `q`         | Quit                             |
 
-- `Space`: play/pause
-- `n` / `p`: next/previous track
-- `Left`: seek -5s
-- `Right`: seek +5s
-- `Shift+Left`: seek -10s
-- `Shift+Right`: seek +10s
+#### Playback
 
-Search and utility:
+| Key                   | Action            |
+| --------------------- | ----------------- |
+| `Space`               | Play / pause      |
+| `n`                   | Next track        |
+| `p`                   | Previous track    |
+| `←` / `→`             | Seek −5s / +5s    |
+| `Shift+←` / `Shift+→` | Seek −10s / +10s  |
+| `[` / `]`             | Volume down / up  |
+| `e`                   | Cycle repeat mode |
+| `u`                   | Toggle shuffle    |
 
-- `s`: open search input
-- `f`: toggle favorite on selected track
-- `a`: add selected track to queue
-- `x`: remove selected queue item
-- `e`: cycle repeat mode
-- `u`: toggle shuffle
-- `[` / `]`: volume down/up
-- `r` (recommended): trigger manual rescan
+#### Library actions
 
-## Search UI
+| Key | Action                              |
+| --- | ----------------------------------- |
+| `s` | Enter Search mode                   |
+| `f` | Toggle favorite on selected track   |
+| `a` | Add selected track to queue         |
+| `x` | Remove selected item from queue     |
+| `m` | Enter Rename mode on selected track |
+| `r` | Rescan library from disk            |
 
-- single search mode in MVP (`s` then type keyword)
-- result list mixes track, artist, album
-- sorting:
-  1. track
-  2. artist
-  3. album
-- fuzzy score used inside each group
+### Search mode
 
-## Resume UX expectation
+| Key         | Action                                    |
+| ----------- | ----------------------------------------- |
+| Any char    | Append to query; library filters live     |
+| `Backspace` | Delete last character                     |
+| `↑` / `↓`   | Navigate filtered results                 |
+| `Enter`     | Play selected result; exit Search mode    |
+| `Esc`       | Cancel; restore full library; clear query |
 
-On app reopen, restore:
+### Rename mode
 
-- queue
-- current track
-- playback position
-- shuffle/repeat modes
+| Key         | Action                                       |
+| ----------- | -------------------------------------------- |
+| Any char    | Append to rename input                       |
+| `Backspace` | Delete last character                        |
+| `Enter`     | Confirm: rename file on disk; reload library |
+| `Esc`       | Cancel; no changes made                      |
 
-User should feel app continues from previous session with minimal friction.
+## Interaction Principles
+
+- All actions available without a mouse.
+- Navigation state is preserved when switching panels.
+- Search clears on both confirmation (`Enter`) and cancellation (`Esc`).
+- Rename operates on the file on disk and updates the database atomically;
+  if `std::fs::rename` fails the database is not touched.
+- Status line (bottom of Now Playing) reflects the last action for quick feedback.
+
+## Session Resume
+
+On every launch the following state is restored from the database:
+
+- Current track and playback position
+- Queue contents and order
+- Shuffle on/off
+- Repeat mode (off / one / all)
