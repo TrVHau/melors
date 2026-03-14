@@ -24,7 +24,7 @@
 - **Fuzzy search** — matches across title, artist, and album in real time
 - **Session persistence** — queue, playback position, repeat mode, and shuffle resume across restarts
 - **Favorites & play counts** — mark tracks and track how often you play them
-- **Inline rename** — rename track files directly from the TUI
+- **Inline rename** — rename track titles/files and artist metadata from the TUI
 - **Visualizer panel** — three built-in modes: spectrum bars (Cava), big clock, and CMatrix rain
 - **Volume control** — per-session volume adjustment
 - **Zero config to start** — sane defaults, directories created automatically
@@ -104,6 +104,7 @@ Change `music_dir` to any path containing your MP3 collection.
 | `a` | Add selected track to queue         |
 | `x` | Remove selected item from queue     |
 | `m` | Rename selected track               |
+| `M` | Rename selected track artist        |
 | `e` | Cycle repeat mode (off / one / all) |
 | `u` | Toggle shuffle                      |
 | `r` | Rescan library from disk            |
@@ -131,18 +132,19 @@ Search scores across track title, artist, and album using fuzzy matching.
 
 ## Rename
 
-Press `m` on any track in the Library to rename it. The progress bar area becomes
-a rename input field, prefilled with the current title.
+Press `m` on any track in the Library to rename its title/file. Press `M` to
+rename its artist field in the database. The progress bar area becomes a rename
+input field, prefilled with the current value.
 
-| Key         | Action                                                      |
-| ----------- | ----------------------------------------------------------- |
-| Any key     | Edit the name                                               |
-| `Backspace` | Delete last character                                       |
-| `Enter`     | Confirm — renames the file on disk and updates the database |
-| `Esc`       | Cancel, no changes made                                     |
+| Key         | Action                                                           |
+| ----------- | ---------------------------------------------------------------- |
+| Any key     | Edit the name                                                    |
+| `Backspace` | Delete last character                                            |
+| `Enter`     | Confirm — applies title/file rename (`m`) or artist rename (`M`) |
+| `Esc`       | Cancel, no changes made                                          |
 
-The file is renamed in-place (same directory, same extension, new stem), and the
-library reloads automatically.
+For `m`, the file is renamed in-place (same directory, same extension, new stem)
+and the library reloads automatically. For `M`, only the artist field is updated.
 
 ## License
 

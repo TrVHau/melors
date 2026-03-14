@@ -405,6 +405,14 @@ impl App {
         self.reload_session_state()
     }
 
+    pub fn rename_artist(&mut self, track_id: i64, new_artist: &str) -> Result<()> {
+        if self.track_by_id(track_id).is_none() {
+            return Ok(());
+        }
+        self.storage.rename_artist(track_id, new_artist)?;
+        self.reload_session_state()
+    }
+
     fn flush_playback_state(&mut self, force: bool) -> Result<()> {
         if !self.playback_state_dirty {
             return Ok(());

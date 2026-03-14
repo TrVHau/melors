@@ -11,7 +11,7 @@ use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, 
 
 use crate::app::App;
 
-use super::state::{FocusPanel, InputMode, UiState, VisualizerMode};
+use super::state::{FocusPanel, InputMode, RenameKind, UiState, VisualizerMode};
 
 impl UiState {
     pub fn draw(&mut self, f: &mut ratatui::Frame<'_>, app: &App) {
@@ -503,11 +503,15 @@ impl UiState {
         let label = if self.mode == InputMode::Search {
             format!("/{}", self.search_input)
         } else if self.mode == InputMode::Rename {
+            let field = match self.rename_kind {
+                RenameKind::Title => "Title",
+                RenameKind::Artist => "Artist",
+            };
             let track_id_label = self
                 .rename_track_id
                 .map(|id| format!("#{} ", id))
                 .unwrap_or_default();
-            format!("Rename {}→ {}_", track_id_label, self.rename_input)
+            format!("Rename {} {}→ {}_", field, track_id_label, self.rename_input)
         } else {
             format!(
                 "{}s / {}s",

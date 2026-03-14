@@ -265,4 +265,12 @@ impl Storage {
         )?;
         Ok(())
     }
+
+    pub fn rename_artist(&self, track_id: i64, new_artist: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE tracks SET artist=?1 WHERE id=?2",
+            params![new_artist, track_id],
+        )?;
+        Ok(())
+    }
 }

@@ -19,11 +19,11 @@ Search mode and the rename input during Rename mode.
 
 ## Input Modes
 
-| Mode     | Trigger         | Description                                |
-| -------- | --------------- | ------------------------------------------ |
-| `Normal` | default / `Esc` | Browse and control playback                |
-| `Search` | `s`             | Type a query; library filters in real time |
-| `Rename` | `m` on a track  | Edit the selected track's filename stem    |
+| Mode     | Trigger              | Description                                          |
+| -------- | -------------------- | ---------------------------------------------------- |
+| `Normal` | default / `Esc`      | Browse and control playback                          |
+| `Search` | `s`                  | Type a query; library filters in real time           |
+| `Rename` | `m` / `M` on a track | Edit selected track title/file (`m`) or artist (`M`) |
 
 ## Keybindings
 
@@ -62,14 +62,15 @@ Search mode and the rename input during Rename mode.
 
 #### Library actions
 
-| Key | Action                              |
-| --- | ----------------------------------- |
-| `s` | Enter Search mode                   |
-| `f` | Toggle favorite on selected track   |
-| `a` | Add selected track to queue         |
-| `x` | Remove selected item from queue     |
-| `m` | Enter Rename mode on selected track |
-| `r` | Rescan library from disk            |
+| Key | Action                                |
+| --- | ------------------------------------- |
+| `s` | Enter Search mode                     |
+| `f` | Toggle favorite on selected track     |
+| `a` | Add selected track to queue           |
+| `x` | Remove selected item from queue       |
+| `m` | Enter Rename mode on selected track   |
+| `M` | Enter Rename mode for selected artist |
+| `r` | Rescan library from disk              |
 
 ### Search mode
 
@@ -83,20 +84,21 @@ Search mode and the rename input during Rename mode.
 
 ### Rename mode
 
-| Key         | Action                                       |
-| ----------- | -------------------------------------------- |
-| Any char    | Append to rename input                       |
-| `Backspace` | Delete last character                        |
-| `Enter`     | Confirm: rename file on disk; reload library |
-| `Esc`       | Cancel; no changes made                      |
+| Key         | Action                                                        |
+| ----------- | ------------------------------------------------------------- |
+| Any char    | Append to rename input                                        |
+| `Backspace` | Delete last character                                         |
+| `Enter`     | Confirm: apply title/file rename (`m`) or artist rename (`M`) |
+| `Esc`       | Cancel; no changes made                                       |
 
 ## Interaction Principles
 
 - All actions available without a mouse.
 - Navigation state is preserved when switching panels.
 - Search clears on both confirmation (`Enter`) and cancellation (`Esc`).
-- Rename operates on the file on disk and updates the database atomically;
+- `m` rename operates on the file on disk and updates the database atomically;
   if `std::fs::rename` fails the database is not touched.
+- `M` rename updates only the artist field in the database.
 - Status line (bottom of Now Playing) reflects the last action for quick feedback.
 
 ## Session Resume

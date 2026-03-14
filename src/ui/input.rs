@@ -3,7 +3,7 @@ use crossterm::event::{self, KeyCode, KeyEvent, KeyModifiers};
 
 use crate::app::App;
 
-use super::state::{FocusPanel, InputMode, UiState, VisualizerMode};
+use super::state::{FocusPanel, InputMode, RenameKind, UiState, VisualizerMode};
 
 impl UiState {
     pub fn handle_key(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
@@ -143,6 +143,15 @@ impl UiState {
                     self.status = String::from("Rename mode — Enter to confirm, Esc to cancel");
                 }
             }
+            KeyCode::Char('M') => {
+                if let Some(track_id) = self.selected_track_id(app)
+                    && let Some(track) = app.track_by_id(track_id)
+                {
+                    let current_artist = track.artist.clone().unwrap_or_default();
+                    self.enter_rename_artist_mode(track_id, &current_artist);
+                    self.status = String::from("Rename artist — Enter to confirm, Esc to cancel");
+                }
+            }
             _ => {}
         }
 
@@ -156,12 +165,23 @@ impl UiState {
                 self.status = String::from("Rename cancelled");
             }
             KeyCode::Enter => {
-                let new_title = self.rename_input.trim().to_string();
+                let new_value = self.rename_input.trim().to_string();
                 if let Some(track_id) = self.rename_track_id
-                    && !new_title.is_empty()
+                    && !new_value.is_empty()
                 {
-                    match app.rename_track(track_id, &new_title) {
-                        Ok(()) => self.status = format!("Renamed #{} → {}", track_id, new_title),
+                    let result = match self.rename_kind {
+                        RenameKind::Title => app.rename_track(track_id, &new_value),
+                        RenameKind::Artist => app.rename_artist(track_id, &new_value),
+                    };
+                    let label = match self.rename_kind {
+                        RenameKind::Title => "title",
+                        RenameKind::Artist => "artist",
+                    };
+                    match result {
+                        Ok(()) => {
+                            self.status =
+                                format!("Renamed {} #{} → {}", label, track_id, new_value)
+                        }
                         Err(e) => self.status = format!("Rename failed: {}", e),
                     }
                 }

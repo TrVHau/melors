@@ -16,6 +16,13 @@ pub enum InputMode {
     Normal,
     Search,
     Rename,
+
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RenameKind {
+    Title,
+    Artist,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,6 +51,7 @@ pub struct UiState {
     pub search_input: String,
     pub rename_input: String,
     pub rename_track_id: Option<i64>,
+    pub rename_kind: RenameKind,
     pub library_selected: usize,
     pub queue_selected: usize,
     pub status: String,
@@ -71,6 +79,7 @@ impl UiState {
             search_input: String::new(),
             rename_input: String::new(),
             rename_track_id: None,
+            rename_kind: RenameKind::Title,
             library_selected: 0,
             queue_selected: 0,
             status: String::from("Ready"),
@@ -108,6 +117,7 @@ impl UiState {
 
     pub fn enter_rename_mode(&mut self, track_id: i64, current_title: &str) {
         self.mode = InputMode::Rename;
+        self.rename_kind = RenameKind::Title;
         self.rename_track_id = Some(track_id);
         self.rename_input = current_title.to_string();
     }
@@ -116,6 +126,13 @@ impl UiState {
         self.mode = InputMode::Normal;
         self.rename_input.clear();
         self.rename_track_id = None;
+    }
+
+    pub fn enter_rename_artist_mode(&mut self, track_id: i64, current_artist: &str) {
+        self.mode = InputMode::Rename;
+        self.rename_kind = RenameKind::Artist;
+        self.rename_track_id = Some(track_id);
+        self.rename_input = current_artist.to_string();
     }
 
     fn is_filtering_library(&self) -> bool {
