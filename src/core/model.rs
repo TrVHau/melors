@@ -1,3 +1,4 @@
+use std::fmt;
 use std::path::PathBuf;
 
 #[allow(dead_code)]
@@ -45,6 +46,24 @@ impl RepeatMode {
             1 => Self::RepeatOne,
             2 => Self::RepeatAll,
             _ => Self::Off,
+        }
+    }
+
+    pub fn cycle(self) -> Self {
+        match self {
+            Self::Off => Self::RepeatOne,
+            Self::RepeatOne => Self::RepeatAll,
+            Self::RepeatAll => Self::Off,
+        }
+    }
+}
+
+impl fmt::Display for RepeatMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Off => write!(f, "Off"),
+            Self::RepeatOne => write!(f, "One"),
+            Self::RepeatAll => write!(f, "All"),
         }
     }
 }

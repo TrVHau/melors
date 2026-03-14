@@ -71,6 +71,18 @@ impl UiState {
                     self.status = format!("Favorite toggled #{}", track_id);
                 }
             }
+            KeyCode::Char('e') => {
+                let mode = app.toggle_repeat()?;
+                self.status = format!("Repeat: {mode}");
+            }
+            KeyCode::Char('s') => {
+                let on = app.toggle_shuffle()?;
+                self.status = if on {
+                    String::from("Shuffle: On")
+                } else {
+                    String::from("Shuffle: Off")
+                };
+            }
             _ => {}
         }
 

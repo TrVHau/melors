@@ -1,3 +1,7 @@
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use std::time::SystemTime;
+
 use anyhow::Result;
 
 use crate::core::model::{PlaybackState, RepeatMode, Track};
@@ -6,6 +10,28 @@ use crate::ui;
 
 use super::App;
 use super::state::AppSession;
+
+fn shuffle_vec(ids: &mut [i64], current_id: Option<i64>) {
+    let mut hasher = DefaultHasher::new();
+    SystemTime::now().hash(&mut hasher);
+    let mut state = hasher.finish();
+
+    let n = ids.len();
+    for i in (1..n).rev() {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        let j = (state as usize) % (i + 1);
+        ids.swap(i, j);
+    }
+
+    // Keep the currently playing track at index 0 so next_track advances correctly.
+    if let Some(id) = current_id
+        && let Some(pos) = ids.iter().position(|&x| x == id)
+    {
+        ids.swap(0, pos);
+    }
+}
 
 impl App {
     pub fn boot() -> Result<Self> {
@@ -175,6 +201,19 @@ impl App {
         Ok(())
     }
 
+    pub fn toggle_repeat(&mut self) -> Result<RepeatMode> {
+        self.session.playback_state.repeat_mode = self.session.playback_state.repeat_mode.cycle();
+        self.persist_playback_state()?;
+        Ok(self.session.playback_state.repeat_mode)
+    }
+
+    pub fn toggle_shuffle(&mut self) -> Result<bool> {
+        self.session.playback_state.shuffle_enabled = !self.session.playback_state.shuffle_enabled;
+        self.rebuild_queue()?;
+        self.persist_playback_state()?;
+        Ok(self.session.playback_state.shuffle_enabled)
+    }
+
     pub fn current_track(&self) -> Option<&Track> {
         self.session
             .playback_state
@@ -188,6 +227,16 @@ impl App {
 
     pub fn playback_state(&self) -> &PlaybackState {
         &self.session.playback_state
+    }
+
+    fn rebuild_queue(&mut self) -> Result<()> {
+        let mut ids: Vec<i64> = self.session.tracks.iter().map(|t| t.id).collect();
+        if self.session.playback_state.shuffle_enabled {
+            shuffle_vec(&mut ids, self.session.playback_state.current_track_id);
+        }
+        self.session.queue = ids.clone();
+        self.storage.replace_queue(&ids)?;
+        Ok(())
     }
 
     fn reload_session_state(&mut self) -> Result<()> {

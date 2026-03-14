@@ -216,7 +216,6 @@ impl Storage {
         Ok(state.unwrap_or_default())
     }
 
-    #[allow(dead_code)]
     pub fn replace_queue(&mut self, track_ids: &[i64]) -> Result<()> {
         let tx = self.conn.transaction()?;
         tx.execute("DELETE FROM queue_state", [])?;

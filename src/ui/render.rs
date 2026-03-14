@@ -129,10 +129,14 @@ impl UiState {
                     track.title
                 )),
                 Line::from(format!(
-                    "Album: {} | Repeat: {:?} | Shuffle: {}",
+                    "Album: {} | Repeat: {} | Shuffle: {}",
                     track.album.as_deref().unwrap_or("Unknown Album"),
                     app.playback_state().repeat_mode,
-                    app.playback_state().shuffle_enabled
+                    if app.playback_state().shuffle_enabled {
+                        "On"
+                    } else {
+                        "Off"
+                    }
                 )),
                 Line::from(format!("Status: {}", self.status)),
             ]
@@ -140,9 +144,13 @@ impl UiState {
             vec![
                 Line::from("Track: (none)"),
                 Line::from(format!(
-                    "Repeat: {:?} | Shuffle: {}",
+                    "Repeat: {} | Shuffle: {}",
                     app.playback_state().repeat_mode,
-                    app.playback_state().shuffle_enabled
+                    if app.playback_state().shuffle_enabled {
+                        "On"
+                    } else {
+                        "Off"
+                    }
                 )),
                 Line::from(format!("Status: {}", self.status)),
             ]
