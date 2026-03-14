@@ -1,3 +1,12 @@
-fn main() {
-    println!("Hello, world!");
+mod app;
+mod core;
+mod features;
+mod services;
+mod ui;
+
+use anyhow::Result;
+
+fn main() -> Result<()> {
+    let mut app = app::App::boot()?;
+    app.run_tui()
 }
