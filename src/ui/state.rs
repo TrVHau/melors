@@ -87,8 +87,22 @@ impl UiState {
         self.visualizer_mode = mode;
     }
 
+    pub fn enter_search_mode(&mut self) {
+        self.mode = InputMode::Search;
+        self.search_input.clear();
+        self.library_selected = 0;
+        self.invalidate_library_cache();
+    }
+
+    pub fn exit_search_mode(&mut self) {
+        self.mode = InputMode::Normal;
+        self.search_input.clear();
+        self.library_selected = 0;
+        self.invalidate_library_cache();
+    }
+
     fn is_filtering_library(&self) -> bool {
-        self.mode == InputMode::Search || !self.search_input.is_empty()
+        self.mode == InputMode::Search
     }
 
     pub fn visible_track_ids(&mut self, app: &App) -> &[i64] {
@@ -232,6 +246,14 @@ impl UiState {
         self.library_cache_query = self.search_input.clone();
         self.library_cache_mode = self.mode;
         self.library_cache_current_track_id = current_track_id;
+    }
+
+    fn invalidate_library_cache(&mut self) {
+        self.library_cache_tracks_version = 0;
+        self.library_cache_query.clear();
+        self.library_cache_current_track_id = None;
+        self.library_cached_track_ids.clear();
+        self.library_cached_rows.clear();
     }
 
     fn refresh_queue_cache(&mut self, app: &App) {

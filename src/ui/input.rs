@@ -38,10 +38,10 @@ impl UiState {
 
         match key.code {
             KeyCode::Char('q') => return Ok(true),
-            KeyCode::Char('h') => self.focus_left(),
-            KeyCode::Char('l') => self.focus_right(),
-            KeyCode::Char('j') | KeyCode::Down => self.move_selection(app, 1),
-            KeyCode::Char('k') | KeyCode::Up => self.move_selection(app, -1),
+            KeyCode::BackTab => self.focus_left(),
+            KeyCode::Tab => self.focus_right(),
+            KeyCode::Down => self.move_selection(app, 1),
+            KeyCode::Up => self.move_selection(app, -1),
             KeyCode::Enter => match self.focus {
                 FocusPanel::Queue => self.play_selected_queue(app)?,
                 _ => self.play_selected(app)?,
@@ -80,9 +80,8 @@ impl UiState {
                 app.seek(delta)?;
                 self.status = format!("Seek +{delta}s");
             }
-            KeyCode::Char('/') => {
-                self.mode = InputMode::Search;
-                self.search_input.clear();
+            KeyCode::Char('s') => {
+                self.enter_search_mode();
                 self.status = String::from("Search mode");
             }
             KeyCode::Char('r') => {
@@ -102,20 +101,11 @@ impl UiState {
                     self.status = format!("Queued #{}", track_id);
                 }
             }
-            KeyCode::Char('d') => {
-                if matches!(self.focus, FocusPanel::Queue)
-                    && let Some(track_id) = app.remove_queue_index(self.queue_selected)?
-                {
-                    self.status = format!("Removed from queue #{}", track_id);
-                    let queue_len = app.queue_len();
-                    self.queue_selected = self.queue_selected.min(queue_len.saturating_sub(1));
-                }
-            }
             KeyCode::Char('e') => {
                 let mode = app.toggle_repeat()?;
                 self.status = format!("Repeat: {mode}");
             }
-            KeyCode::Char('s') => {
+            KeyCode::Char('u') => {
                 let on = app.toggle_shuffle()?;
                 self.status = if on {
                     String::from("Shuffle: On")
@@ -123,13 +113,22 @@ impl UiState {
                     String::from("Shuffle: Off")
                 };
             }
-            KeyCode::Char('+') | KeyCode::Char('=') => {
+            KeyCode::Char(']') => {
                 let volume = app.adjust_volume(0.05);
                 self.status = format!("Volume: {volume}%");
             }
-            KeyCode::Char('-') => {
+            KeyCode::Char('[') => {
                 let volume = app.adjust_volume(-0.05);
                 self.status = format!("Volume: {volume}%");
+            }
+            KeyCode::Char('x') => {
+                if matches!(self.focus, FocusPanel::Queue)
+                    && let Some(track_id) = app.remove_queue_index(self.queue_selected)?
+                {
+                    self.status = format!("Removed from queue #{}", track_id);
+                    let queue_len = app.queue_len();
+                    self.queue_selected = self.queue_selected.min(queue_len.saturating_sub(1));
+                }
             }
             _ => {}
         }
@@ -139,23 +138,21 @@ impl UiState {
 
     fn handle_search_input(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
         match key.code {
-            KeyCode::Esc | KeyCode::Char('q') => {
-                self.mode = InputMode::Normal;
-                self.search_input.clear();
-                self.library_selected = 0;
+            KeyCode::Esc => {
+                self.exit_search_mode();
                 self.status = String::from("Back to normal mode");
             }
             KeyCode::Enter => {
                 self.play_selected(app)?;
-                self.mode = InputMode::Normal;
+                self.exit_search_mode();
                 self.status = String::from("Play from search results");
             }
             KeyCode::Backspace => {
                 self.search_input.pop();
                 self.library_selected = 0;
             }
-            KeyCode::Down | KeyCode::Char('j') => self.move_selection(app, 1),
-            KeyCode::Up | KeyCode::Char('k') => self.move_selection(app, -1),
+            KeyCode::Down => self.move_selection(app, 1),
+            KeyCode::Up => self.move_selection(app, -1),
             KeyCode::Char(c) => {
                 if !key.modifiers.contains(KeyModifiers::CONTROL)
                     && !key.modifiers.contains(KeyModifiers::ALT)

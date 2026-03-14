@@ -57,14 +57,14 @@ The app rescans this folder every time it starts and whenever you press `r`.
 
 ### Navigation
 
-| Key       | Action                            |
-| --------- | --------------------------------- |
-| `j` / `↓` | Move selection down               |
-| `k` / `↑` | Move selection up                 |
-| `h`       | Move focus left                   |
-| `l`       | Move focus right                  |
-| `Enter`   | Play selected track or queue item |
-| `q`       | Quit                              |
+| Key         | Action                            |
+| ----------- | --------------------------------- |
+| `↓`         | Move selection down               |
+| `↑`         | Move selection up                 |
+| `Shift+Tab` | Move focus left                   |
+| `Tab`       | Move focus right                  |
+| `Enter`     | Play selected track or queue item |
+| `q`         | Quit                              |
 
 ### Playback
 
@@ -75,8 +75,8 @@ The app rescans this folder every time it starts and whenever you press `r`.
 | `p`                   | Previous track               |
 | `←` / `→`             | Seek −5s / +5s               |
 | `Shift+←` / `Shift+→` | Seek −10s / +10s             |
-| `+` / `=`             | Volume up                    |
-| `-`                   | Volume down                  |
+| `]`                   | Volume up                    |
+| `[`                   | Volume down                  |
 | `Alt+1`               | Switch to Cava visualizer    |
 | `Alt+2`               | Switch to Clock visualizer   |
 | `Alt+3`               | Switch to CMatrix visualizer |
@@ -85,22 +85,23 @@ The app rescans this folder every time it starts and whenever you press `r`.
 
 | Key | Action                            |
 | --- | --------------------------------- |
-| `/` | Open search                       |
+| `s` | Open search                       |
 | `f` | Toggle favorite on selected track |
 | `a` | Add selected track to queue       |
-| `d` | Remove selected queue item        |
+| `x` | Remove selected queue item        |
 | `r` | Rescan library from disk          |
 | `e` | Cycle repeat mode                 |
-| `s` | Toggle shuffle                    |
+| `u` | Toggle shuffle                    |
 
 ## Search
 
-Press `/` to enter search mode. Type a keyword — results update as you type.
+Press `s` to enter search mode. Type a keyword — results update as you type.
 
-- `j` / `k` — move through results
+- `↑` / `↓` — move through results
 - `Enter` — play the selected result
 - `Backspace` — delete last character
-- `Esc` or `q` — exit search, go back to full library
+- `Esc` — exit search, clear query, and return to full library
+- `Enter` also clears the query after playing a result
 
 Search matches across track title, artist, and album using fuzzy scoring.
 

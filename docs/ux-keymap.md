@@ -25,10 +25,10 @@ Behavior on small terminal:
 
 Navigation and app flow:
 
-- `j` / `k`: move up/down list
-- `h` / `l`: move between panels
+- `Up` / `Down`: move up/down list
+- `Shift+Tab` / `Tab`: move between panels
 - `Enter`: select/open
-- `q`: back when in sub-panel, exit when at root
+- `q`: exit app
 
 Playback:
 
@@ -41,13 +41,18 @@ Playback:
 
 Search and utility:
 
-- `/`: open search input
+- `s`: open search input
 - `f`: toggle favorite on selected track
+- `a`: add selected track to queue
+- `x`: remove selected queue item
+- `e`: cycle repeat mode
+- `u`: toggle shuffle
+- `[` / `]`: volume down/up
 - `r` (recommended): trigger manual rescan
 
 ## Search UI
 
-- single search mode in MVP (`/keyword`)
+- single search mode in MVP (`s` then type keyword)
 - result list mixes track, artist, album
 - sorting:
   1. track

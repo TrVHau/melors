@@ -7,7 +7,7 @@ use chrono::Local;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Gauge, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph};
 
 use crate::app::App;
 
@@ -15,6 +15,8 @@ use super::state::{FocusPanel, InputMode, UiState, VisualizerMode};
 
 impl UiState {
     pub fn draw(&mut self, f: &mut ratatui::Frame<'_>, app: &App) {
+        f.render_widget(Clear, f.area());
+
         let root = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -85,6 +87,8 @@ impl UiState {
     }
 
     fn draw_library(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
+        f.render_widget(Clear, area);
+
         let rows_len = self.library_rows(app).len();
         if rows_len == 0 {
             self.library_selected = 0;
@@ -107,10 +111,14 @@ impl UiState {
                 Style::default()
             });
 
+        let content_width = area.width.saturating_sub(4) as usize;
         let items: Vec<ListItem<'_>> = self
             .library_rows(app)
             .iter()
-            .map(|row| ListItem::new(Line::from(row.clone())))
+            .map(|row| {
+                let text = Self::fixed_width_text(row, content_width);
+                ListItem::new(Line::from(text))
+            })
             .collect();
 
         let mut state = ListState::default();
@@ -133,6 +141,8 @@ impl UiState {
     }
 
     fn draw_queue(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
+        f.render_widget(Clear, area);
+
         let queue_len = self.queue_rows(app).len();
         if queue_len == 0 {
             self.queue_selected = 0;
@@ -149,12 +159,19 @@ impl UiState {
                 Style::default()
             });
 
+        let content_width = area.width.saturating_sub(4) as usize;
         let items: Vec<ListItem<'_>> = if queue_len == 0 {
-            vec![ListItem::new(Line::from("(queue empty)"))]
+            vec![ListItem::new(Line::from(Self::fixed_width_text(
+                "(queue empty)",
+                content_width,
+            )))]
         } else {
             self.queue_rows(app)
                 .iter()
-                .map(|row| ListItem::new(Line::from(row.clone())))
+                .map(|row| {
+                    let text = Self::fixed_width_text(row, content_width);
+                    ListItem::new(Line::from(text))
+                })
                 .collect()
         };
 
@@ -469,6 +486,8 @@ impl UiState {
     }
 
     fn draw_progress(&self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
+        f.render_widget(Clear, area);
+
         let current_duration = app
             .current_track()
             .and_then(|track| track.duration_secs)
@@ -490,6 +509,9 @@ impl UiState {
             )
         };
 
+        let label_width = area.width.saturating_sub(2) as usize;
+        let label = Self::fixed_width_text(&label, label_width);
+
         let gauge = Gauge::default()
             .block(Block::default().borders(Borders::ALL).title(" Progress "))
             .gauge_style(Style::default().fg(Color::Magenta))
@@ -497,5 +519,18 @@ impl UiState {
             .label(label);
 
         f.render_widget(gauge, area);
+    }
+
+    fn fixed_width_text(text: &str, width: usize) -> String {
+        if width == 0 {
+            return String::new();
+        }
+
+        let mut out: String = text.chars().take(width).collect();
+        let used = out.chars().count();
+        if used < width {
+            out.push_str(&" ".repeat(width - used));
+        }
+        out
     }
 }
