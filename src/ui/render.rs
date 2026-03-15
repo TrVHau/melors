@@ -5,7 +5,7 @@ use chrono::Local;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Gauge, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph};
 
 use crate::app::App;
 
@@ -43,6 +43,10 @@ impl UiState {
         self.draw_now_playing(f, bottom[0], app);
         self.draw_visualizer_panel(f, bottom[1], app);
         self.draw_progress(f, root[2], app);
+
+        if self.mode == InputMode::EditTag {
+            self.draw_edit_tag_popup(f);
+        }
     }
 
     fn draw_sidebar(&self, f: &mut ratatui::Frame<'_>, area: Rect) {
@@ -101,6 +105,7 @@ impl UiState {
             InputMode::Normal => "Normal",
             InputMode::Search => "Search",
             InputMode::Rename => "Rename",
+            InputMode::EditTag => "Edit Tags",
         };
 
         let block = Block::default()
@@ -481,8 +486,10 @@ impl UiState {
                 .rename_track_id
                 .map(|id| format!("#{} ", id))
                 .unwrap_or_default();
-            format!("Rename {} {}→ {}_", field, track_id_label, self.rename_input)
-        } else {
+            format!("Rename {} {}→ {}_", field, track_id_label, self.rename_input)        } else if self.mode == InputMode::EditTag {
+            let field_name = ["Title", "Artist", "Album"][self.edit_tag_field];
+            let value = &self.edit_tag_inputs[self.edit_tag_field];
+            format!("Edit Tag [{}] \u{2192} {}_", field_name, value)        } else {
             format!(
                 "{}s / {}s",
                 app.playback_state().position_secs,
@@ -500,6 +507,51 @@ impl UiState {
             .label(label);
 
         f.render_widget(gauge, area);
+    }
+
+    fn draw_edit_tag_popup(&self, f: &mut ratatui::Frame<'_>) {
+        let area = f.area();
+        let popup_width = 54u16.min(area.width.saturating_sub(4));
+        let popup_height = 7u16;
+        let x = area.x + area.width.saturating_sub(popup_width) / 2;
+        let y = area.y + area.height.saturating_sub(popup_height) / 2;
+        let popup_area = Rect::new(x, y, popup_width, popup_height);
+
+        let field_names = ["Title ", "Artist", "Album "];
+        let lines: Vec<Line<'_>> = (0..3)
+            .map(|i| {
+                let cursor = if self.edit_tag_field == i { "_" } else { " " };
+                let prefix = if self.edit_tag_field == i { "> " } else { "  " };
+                let value = &self.edit_tag_inputs[i];
+                Line::from(vec![
+                    Span::styled(
+                        format!("{}{}: ", prefix, field_names[i]),
+                        if self.edit_tag_field == i {
+                            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+                        } else {
+                            Style::default().fg(Color::Gray)
+                        },
+                    ),
+                    Span::raw(format!("{}{}", value, cursor)),
+                ])
+            })
+            .collect();
+
+        let track_id_label = self
+            .edit_tag_track_id
+            .map(|id| format!(" #{} ", id))
+            .unwrap_or_default();
+
+        let paragraph = Paragraph::new(lines).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!(" Edit Tags{}", track_id_label))
+                .title_bottom(" [Tab] next  [Enter] save  [Esc] cancel ")
+                .border_style(Style::default().fg(Color::Cyan)),
+        );
+
+        f.render_widget(Clear, popup_area);
+        f.render_widget(paragraph, popup_area);
     }
 
     fn fixed_width_text(text: &str, width: usize) -> String {

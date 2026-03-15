@@ -20,7 +20,7 @@ pub enum InputMode {
     Normal,
     Search,
     Rename,
-
+    EditTag,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -56,6 +56,9 @@ pub struct UiState {
     pub rename_input: String,
     pub rename_track_id: Option<i64>,
     pub rename_kind: RenameKind,
+    pub edit_tag_track_id: Option<i64>,
+    pub edit_tag_inputs: [String; 3],
+    pub edit_tag_field: usize,
     pub library_selected: usize,
     pub queue_selected: usize,
     pub status: String,
@@ -93,6 +96,9 @@ impl UiState {
             rename_input: String::new(),
             rename_track_id: None,
             rename_kind: RenameKind::Title,
+            edit_tag_track_id: None,
+            edit_tag_inputs: [String::new(), String::new(), String::new()],
+            edit_tag_field: 0,
             library_selected: 0,
             queue_selected: 0,
             status: String::from("Ready"),
@@ -155,6 +161,20 @@ impl UiState {
         self.rename_kind = RenameKind::Artist;
         self.rename_track_id = Some(track_id);
         self.rename_input = current_artist.to_string();
+    }
+
+    pub fn enter_edit_tag_mode(&mut self, track_id: i64, title: &str, artist: &str, album: &str) {
+        self.mode = InputMode::EditTag;
+        self.edit_tag_track_id = Some(track_id);
+        self.edit_tag_inputs = [title.to_string(), artist.to_string(), album.to_string()];
+        self.edit_tag_field = 0;
+    }
+
+    pub fn exit_edit_tag_mode(&mut self) {
+        self.mode = InputMode::Normal;
+        self.edit_tag_track_id = None;
+        self.edit_tag_inputs = [String::new(), String::new(), String::new()];
+        self.edit_tag_field = 0;
     }
 
     fn is_filtering_library(&self) -> bool {

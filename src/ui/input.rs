@@ -40,6 +40,10 @@ impl UiState {
             return self.handle_rename_input(app, key);
         }
 
+        if self.mode == InputMode::EditTag {
+            return self.handle_edit_tag_input(app, key);
+        }
+
         match key.code {
             KeyCode::Char('q') => return Ok(true),
             KeyCode::BackTab => self.focus_left(),
@@ -152,9 +156,61 @@ impl UiState {
                     self.status = String::from("Rename artist — Enter to confirm, Esc to cancel");
                 }
             }
+            KeyCode::Char('t') => {
+                if let Some(track_id) = self.selected_track_id(app)
+                    && let Some(track) = app.track_by_id(track_id)
+                {
+                    let title = track.title.clone();
+                    let artist = track.artist.clone().unwrap_or_default();
+                    let album = track.album.clone().unwrap_or_default();
+                    self.enter_edit_tag_mode(track_id, &title, &artist, &album);
+                    self.status = String::from("Edit tags — Tab: next field, Enter: save, Esc: cancel");
+                }
+            }
             _ => {}
         }
 
+        Ok(false)
+    }
+
+    fn handle_edit_tag_input(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
+        match key.code {
+            KeyCode::Esc => {
+                self.exit_edit_tag_mode();
+                self.status = String::from("Edit tags cancelled");
+            }
+            KeyCode::Tab => {
+                self.edit_tag_field = (self.edit_tag_field + 1) % 3;
+            }
+            KeyCode::BackTab => {
+                self.edit_tag_field = (self.edit_tag_field + 2) % 3;
+            }
+            KeyCode::Enter => {
+                if let Some(track_id) = self.edit_tag_track_id {
+                    let title = self.edit_tag_inputs[0].trim().to_string();
+                    if !title.is_empty() {
+                        let artist = self.edit_tag_inputs[1].trim().to_string();
+                        let album = self.edit_tag_inputs[2].trim().to_string();
+                        match app.write_track_tags(track_id, &title, &artist, &album) {
+                            Ok(()) => self.status = format!("Tags saved for #{}", track_id),
+                            Err(e) => self.status = format!("Save failed: {}", e),
+                        }
+                    }
+                }
+                self.exit_edit_tag_mode();
+            }
+            KeyCode::Backspace => {
+                self.edit_tag_inputs[self.edit_tag_field].pop();
+            }
+            KeyCode::Char(c) => {
+                if !key.modifiers.contains(KeyModifiers::CONTROL)
+                    && !key.modifiers.contains(KeyModifiers::ALT)
+                {
+                    self.edit_tag_inputs[self.edit_tag_field].push(c);
+                }
+            }
+            _ => {}
+        }
         Ok(false)
     }
 

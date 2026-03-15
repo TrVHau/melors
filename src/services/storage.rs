@@ -89,6 +89,10 @@ impl Storage {
             "ALTER TABLE tracks ADD COLUMN artist_override INTEGER NOT NULL DEFAULT 0",
             [],
         );
+        let _ = self.conn.execute(
+            "ALTER TABLE tracks ADD COLUMN album_override INTEGER NOT NULL DEFAULT 0",
+            [],
+        );
         Ok(())
     }
 
@@ -294,6 +298,14 @@ impl Storage {
         self.conn.execute(
             "UPDATE tracks SET artist=?1, artist_override=1 WHERE id=?2",
             params![new_artist, track_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn rename_album(&self, track_id: i64, new_album: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE tracks SET album=?1, album_override=1 WHERE id=?2",
+            params![new_album, track_id],
         )?;
         Ok(())
     }

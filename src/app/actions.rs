@@ -423,6 +423,29 @@ impl App {
         self.reload_session_state()
     }
 
+    pub fn write_track_tags(
+        &mut self,
+        track_id: i64,
+        title: &str,
+        artist: &str,
+        album: &str,
+    ) -> Result<()> {
+        let path = match self.track_by_id(track_id) {
+            Some(t) => t.path.clone(),
+            None => return Ok(()),
+        };
+        crate::services::metadata::write_tag(
+            &path,
+            title,
+            if artist.is_empty() { None } else { Some(artist) },
+            if album.is_empty() { None } else { Some(album) },
+        )?;
+        self.storage.rename_track(track_id, title, &path.to_string_lossy())?;
+        self.storage.rename_artist(track_id, artist)?;
+        self.storage.rename_album(track_id, album)?;
+        self.reload_session_state()
+    }
+
     fn flush_playback_state(&mut self, force: bool) -> Result<()> {
         if !self.playback_state_dirty {
             return Ok(());
