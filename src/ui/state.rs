@@ -61,11 +61,15 @@ pub struct UiState {
     library_cache_current_track_id: Option<i64>,
     library_cached_track_ids: Vec<i64>,
     library_cached_rows: Vec<String>,
+    library_render_width: usize,
+    library_cached_render_rows: Vec<String>,
     queue_cache_tracks_version: u64,
     queue_cache_version: u64,
     queue_cache_current_track_id: Option<i64>,
     queue_cached_track_ids: Vec<i64>,
     queue_cached_rows: Vec<String>,
+    queue_render_width: usize,
+    queue_cached_render_rows: Vec<String>,
 }
 
 impl UiState {
@@ -89,11 +93,15 @@ impl UiState {
             library_cache_current_track_id: None,
             library_cached_track_ids: Vec::new(),
             library_cached_rows: Vec::new(),
+            library_render_width: 0,
+            library_cached_render_rows: Vec::new(),
             queue_cache_tracks_version: 0,
             queue_cache_version: 0,
             queue_cache_current_track_id: None,
             queue_cached_track_ids: Vec::new(),
             queue_cached_rows: Vec::new(),
+            queue_render_width: 0,
+            queue_cached_render_rows: Vec::new(),
         }
     }
 
@@ -157,9 +165,19 @@ impl UiState {
             .copied()
     }
 
-    pub fn library_rows(&mut self, app: &App) -> &[String] {
+    pub fn library_rows_for_width(&mut self, app: &App, width: usize) -> &[String] {
         self.refresh_library_cache(app);
-        &self.library_cached_rows
+        if self.library_render_width != width
+            || self.library_cached_render_rows.len() != self.library_cached_rows.len()
+        {
+            self.library_cached_render_rows = self
+                .library_cached_rows
+                .iter()
+                .map(|row| Self::fixed_width_cell(row, width))
+                .collect();
+            self.library_render_width = width;
+        }
+        &self.library_cached_render_rows
     }
 
     pub fn queue_track_ids(&mut self, app: &App) -> &[i64] {
@@ -167,9 +185,19 @@ impl UiState {
         &self.queue_cached_track_ids
     }
 
-    pub fn queue_rows(&mut self, app: &App) -> &[String] {
+    pub fn queue_rows_for_width(&mut self, app: &App, width: usize) -> &[String] {
         self.refresh_queue_cache(app);
-        &self.queue_cached_rows
+        if self.queue_render_width != width
+            || self.queue_cached_render_rows.len() != self.queue_cached_rows.len()
+        {
+            self.queue_cached_render_rows = self
+                .queue_cached_rows
+                .iter()
+                .map(|row| Self::fixed_width_cell(row, width))
+                .collect();
+            self.queue_render_width = width;
+        }
+        &self.queue_cached_render_rows
     }
 
     pub fn focus_left(&mut self) {
@@ -280,6 +308,8 @@ impl UiState {
         self.library_cache_query = self.search_input.clone();
         self.library_cache_mode = self.mode;
         self.library_cache_current_track_id = current_track_id;
+        self.library_render_width = 0;
+        self.library_cached_render_rows.clear();
     }
 
     fn invalidate_library_cache(&mut self) {
@@ -288,6 +318,8 @@ impl UiState {
         self.library_cache_current_track_id = None;
         self.library_cached_track_ids.clear();
         self.library_cached_rows.clear();
+        self.library_render_width = 0;
+        self.library_cached_render_rows.clear();
     }
 
     fn refresh_queue_cache(&mut self, app: &App) {
@@ -328,5 +360,20 @@ impl UiState {
         self.queue_cache_version = queue_version;
         self.queue_cache_tracks_version = tracks_version;
         self.queue_cache_current_track_id = current_track_id;
+        self.queue_render_width = 0;
+        self.queue_cached_render_rows.clear();
+    }
+
+    fn fixed_width_cell(text: &str, width: usize) -> String {
+        if width == 0 {
+            return String::new();
+        }
+
+        let mut out: String = text.chars().take(width).collect();
+        let used = out.chars().count();
+        if used < width {
+            out.push_str(&" ".repeat(width - used));
+        }
+        out
     }
 }

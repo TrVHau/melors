@@ -7,7 +7,7 @@ use chrono::Local;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{Block, Borders, Gauge, List, ListItem, ListState, Paragraph};
 
 use crate::app::App;
 
@@ -15,8 +15,6 @@ use super::state::{FocusPanel, InputMode, RenameKind, UiState, VisualizerMode};
 
 impl UiState {
     pub fn draw(&mut self, f: &mut ratatui::Frame<'_>, app: &App) {
-        f.render_widget(Clear, f.area());
-
         let root = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -87,14 +85,18 @@ impl UiState {
     }
 
     fn draw_library(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
-        f.render_widget(Clear, area);
-
-        let rows_len = self.library_rows(app).len();
+        let content_width = area.width.saturating_sub(4) as usize;
+        let rows_len = self.library_rows_for_width(app, content_width).len();
         if rows_len == 0 {
             self.library_selected = 0;
         } else {
             self.library_selected = min(self.library_selected, rows_len - 1);
         }
+        let selected = if rows_len == 0 {
+            None
+        } else {
+            Some(self.library_selected)
+        };
 
         let is_focus = matches!(self.focus, FocusPanel::Library);
         let mode_title = match self.mode {
@@ -112,22 +114,14 @@ impl UiState {
                 Style::default()
             });
 
-        let content_width = area.width.saturating_sub(4) as usize;
         let items: Vec<ListItem<'_>> = self
-            .library_rows(app)
+            .library_rows_for_width(app, content_width)
             .iter()
-            .map(|row| {
-                let text = Self::fixed_width_text(row, content_width);
-                ListItem::new(Line::from(text))
-            })
+            .map(|row| ListItem::new(row.as_str()))
             .collect();
 
         let mut state = ListState::default();
-        state.select(if rows_len == 0 {
-            None
-        } else {
-            Some(self.library_selected)
-        });
+        state.select(selected);
 
         let list = List::new(items)
             .block(block)
@@ -142,14 +136,18 @@ impl UiState {
     }
 
     fn draw_queue(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
-        f.render_widget(Clear, area);
-
-        let queue_len = self.queue_rows(app).len();
+        let content_width = area.width.saturating_sub(4) as usize;
+        let queue_len = self.queue_rows_for_width(app, content_width).len();
         if queue_len == 0 {
             self.queue_selected = 0;
         } else {
             self.queue_selected = min(self.queue_selected, queue_len - 1);
         }
+        let selected = if queue_len == 0 {
+            None
+        } else {
+            Some(self.queue_selected)
+        };
 
         let block = Block::default()
             .borders(Borders::ALL)
@@ -160,28 +158,17 @@ impl UiState {
                 Style::default()
             });
 
-        let content_width = area.width.saturating_sub(4) as usize;
         let items: Vec<ListItem<'_>> = if queue_len == 0 {
-            vec![ListItem::new(Line::from(Self::fixed_width_text(
-                "(queue empty)",
-                content_width,
-            )))]
+            vec![ListItem::new("(queue empty)")]
         } else {
-            self.queue_rows(app)
+            self.queue_rows_for_width(app, content_width)
                 .iter()
-                .map(|row| {
-                    let text = Self::fixed_width_text(row, content_width);
-                    ListItem::new(Line::from(text))
-                })
+                .map(|row| ListItem::new(row.as_str()))
                 .collect()
         };
 
         let mut state = ListState::default();
-        state.select(if queue_len == 0 {
-            None
-        } else {
-            Some(self.queue_selected)
-        });
+        state.select(selected);
 
         let list = List::new(items)
             .block(block)
@@ -438,7 +425,7 @@ impl UiState {
         for ch in text.chars() {
             let glyph = match ch {
                 '0' => ["███", "█ █", "█ █", "█ █", "███"],
-                '1' => [" ██", "███", " ██", " ██", "███"],
+                '1' => [" █ ", "██ ", " █ ", " █ ", "███"],
                 '2' => ["███", "  █", "███", "█  ", "███"],
                 '3' => ["███", "  █", "███", "  █", "███"],
                 '4' => ["█ █", "█ █", "███", "  █", "  █"],
@@ -487,8 +474,6 @@ impl UiState {
     }
 
     fn draw_progress(&self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
-        f.render_widget(Clear, area);
-
         let current_duration = app
             .current_track()
             .and_then(|track| track.duration_secs)

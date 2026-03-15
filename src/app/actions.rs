@@ -1,4 +1,4 @@
-use std::collections::{HashSet, hash_map::DefaultHasher};
+use std::collections::{HashMap, HashSet, hash_map::DefaultHasher};
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::time::{Duration, SystemTime};
@@ -56,6 +56,7 @@ impl App {
             storage,
             player,
             session: AppSession {
+                track_index_by_id: Self::build_track_index(&tracks),
                 tracks,
                 tracks_version: 1,
                 queue,
@@ -97,13 +98,11 @@ impl App {
     pub fn play_track(&mut self, track_id: i64) -> Result<()> {
         self.ensure_track_in_queue(track_id)?;
 
-        if let Some(track) = self
-            .session
-            .tracks
-            .iter()
-            .find(|track| track.id == track_id)
+        if let Some((path, mtime)) = self
+            .track_by_id(track_id)
+            .map(|track| (track.path.clone(), track.mtime))
         {
-            self.player.play_file(&track.path, track.mtime, 0)?;
+            self.player.play_file(&path, mtime, 0)?;
             self.session.playback_state.current_track_id = Some(track_id);
             self.session.playback_state.position_secs = 0;
             self.storage.increment_play_count(track_id)?;
@@ -181,10 +180,12 @@ impl App {
         }
 
         if let Some(track_id) = self.session.playback_state.current_track_id
-            && let Some(track) = self.session.tracks.iter().find(|t| t.id == track_id)
+            && let Some((path, mtime)) = self
+                .track_by_id(track_id)
+                .map(|track| (track.path.clone(), track.mtime))
         {
             let start_at = self.session.playback_state.position_secs;
-            self.player.play_file(&track.path, track.mtime, start_at)?;
+            self.player.play_file(&path, mtime, start_at)?;
             return Ok(false);
         }
 
@@ -281,7 +282,7 @@ impl App {
         self.session
             .playback_state
             .current_track_id
-            .and_then(|id| self.session.tracks.iter().find(|track| track.id == id))
+            .and_then(|id| self.track_by_id(id))
     }
 
     pub fn queue_len(&self) -> usize {
@@ -320,6 +321,7 @@ impl App {
 
     fn reload_session_state(&mut self) -> Result<()> {
         self.session.tracks = self.storage.load_tracks()?;
+        self.session.track_index_by_id = Self::build_track_index(&self.session.tracks);
         self.session.tracks_version = self.session.tracks_version.saturating_add(1);
         self.session.queue = self.storage.load_queue()?;
         self.session.queue_version = self.session.queue_version.saturating_add(1);
@@ -376,9 +378,17 @@ impl App {
 
     pub fn track_by_id(&self, track_id: i64) -> Option<&Track> {
         self.session
-            .tracks
+            .track_index_by_id
+            .get(&track_id)
+            .and_then(|idx| self.session.tracks.get(*idx))
+    }
+
+    fn build_track_index(tracks: &[Track]) -> HashMap<i64, usize> {
+        tracks
             .iter()
-            .find(|track| track.id == track_id)
+            .enumerate()
+            .map(|(idx, track)| (track.id, idx))
+            .collect()
     }
 
     pub fn rename_track(&mut self, track_id: i64, new_title: &str) -> Result<()> {
