@@ -165,6 +165,10 @@ impl Player {
         self.backend.sink.is_some()
     }
 
+    pub fn is_paused(&self) -> bool {
+        self.paused
+    }
+
     pub fn adjust_volume(&mut self, delta: f32) -> u8 {
         let next = (self.volume + delta).clamp(0.0, 1.5);
         self.volume = next;

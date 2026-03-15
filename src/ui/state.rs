@@ -66,7 +66,7 @@ pub struct UiState {
     library_cache_query: String,
     library_cache_mode: InputMode,
     library_cache_current_track_id: Option<i64>,
-    library_cached_track_ids: Vec<i64>,
+    pub library_cached_track_ids: Vec<i64>,
     library_cached_rows: Vec<String>,
     library_render_width: usize,
     library_cached_render_rows: Vec<String>,

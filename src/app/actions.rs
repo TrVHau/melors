@@ -238,6 +238,10 @@ impl App {
         self.player.volume_percent()
     }
 
+    pub fn is_actively_playing(&self) -> bool {
+        self.player.has_active_sink() && !self.player.is_paused()
+    }
+
     pub fn visualizer_levels(&self, bars: usize) -> Vec<(f32, f32)> {
         self.player.visualizer_levels(bars)
     }

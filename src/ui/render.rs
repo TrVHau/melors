@@ -5,7 +5,7 @@ use chrono::Local;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph, Tabs};
 
 use crate::app::App;
 
@@ -16,74 +16,87 @@ impl UiState {
         let root = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Min(10),
-                Constraint::Length(8),
-                Constraint::Length(3),
+                Constraint::Length(1),  // header: current track info
+                Constraint::Length(3),  // tab bar
+                Constraint::Min(8),     // library + queue
+                Constraint::Length(8),  // now playing + visualizer
+                Constraint::Length(3),  // progress
+                Constraint::Length(1),  // status bar
             ])
             .split(f.area());
 
-        let top = Layout::default()
+        let content = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Length(18),
-                Constraint::Min(32),
-                Constraint::Length(36),
-            ])
-            .split(root[0]);
-
-        self.draw_sidebar(f, top[0]);
-        self.draw_library(f, top[1], app);
-        self.draw_queue(f, top[2], app);
+            .constraints([Constraint::Min(32), Constraint::Length(36)])
+            .split(root[2]);
 
         let bottom = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
-            .split(root[1]);
+            .split(root[3]);
 
+        self.draw_header(f, root[0], app);
+        self.draw_tabs(f, root[1]);
+        self.draw_library(f, content[0], app);
+        self.draw_queue(f, content[1], app);
         self.draw_now_playing(f, bottom[0], app);
         self.draw_visualizer_panel(f, bottom[1], app);
-        self.draw_progress(f, root[2], app);
+        self.draw_progress(f, root[4], app);
+        self.draw_statusbar(f, root[5]);
 
         if self.mode == InputMode::EditTag {
             self.draw_edit_tag_popup(f);
         }
     }
 
-    fn draw_sidebar(&self, f: &mut ratatui::Frame<'_>, area: Rect) {
-        let is_focus = matches!(self.focus, FocusPanel::Sidebar);
-        let title = if is_focus {
-            " Sections [focus] "
+    fn draw_header(&self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
+        let text = if let Some(track) = app.current_track() {
+            let artist = track.artist.as_deref().unwrap_or("Unknown Artist");
+            let album = track.album.as_deref().unwrap_or("");
+            let icon = if app.is_actively_playing() { "▶" } else { "⏸" };
+            let album_part = if album.is_empty() {
+                String::new()
+            } else {
+                format!("  [{}]", album)
+            };
+            format!(" {} {} – {}{}", icon, artist, track.title, album_part)
         } else {
-            " Sections "
+            String::from("  melors  —  no track loaded")
         };
-        let items = vec![
-            ListItem::new(if matches!(self.focus, FocusPanel::Library) {
-                "> Library"
-            } else {
-                "  Library"
-            }),
-            ListItem::new(if self.mode == InputMode::Search {
-                "> Search"
-            } else {
-                "  Search"
-            }),
-            ListItem::new(if matches!(self.focus, FocusPanel::Queue) {
-                "> Queue"
-            } else {
-                "  Queue"
-            }),
-            ListItem::new("  Now Playing"),
-        ];
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title(title)
-            .border_style(if is_focus {
-                Style::default().fg(Color::Cyan)
-            } else {
+
+        let p = Paragraph::new(text)
+            .style(Style::default().fg(Color::Rgb(200, 180, 255)));
+        f.render_widget(p, area);
+    }
+
+    fn draw_tabs(&self, f: &mut ratatui::Frame<'_>, area: Rect) {
+        let tab_idx = match self.focus {
+            FocusPanel::Sidebar => 0,
+            FocusPanel::Library if self.mode == InputMode::Search => 1,
+            FocusPanel::Library => 0,
+            FocusPanel::Queue => 2,
+        };
+        let titles = vec![" Library ", " Search ", " Queue "];
+        let is_focus = matches!(self.focus, FocusPanel::Sidebar);
+        let tabs = Tabs::new(titles)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" melors ")
+                    .border_style(if is_focus {
+                        Style::default().fg(Color::Cyan)
+                    } else {
+                        Style::default().fg(Color::Rgb(70, 70, 95))
+                    }),
+            )
+            .select(tab_idx)
+            .style(Style::default().fg(Color::Rgb(120, 120, 160)))
+            .highlight_style(
                 Style::default()
-            });
-        let list = List::new(items).block(block);
-        f.render_widget(list, area);
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
+            );
+        f.render_widget(tabs, area);
     }
 
     fn draw_library(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
@@ -100,27 +113,41 @@ impl UiState {
             Some(self.library_selected)
         };
 
-        let is_focus = matches!(self.focus, FocusPanel::Library);
-        let mode_title = match self.mode {
-            InputMode::Normal => "Normal",
-            InputMode::Search => "Search",
-            InputMode::Rename => "Rename",
-            InputMode::EditTag => "Edit Tags",
+        let is_active = matches!(self.focus, FocusPanel::Library)
+            || matches!(self.mode, InputMode::Search | InputMode::Rename | InputMode::EditTag);
+        let mode_suffix = match self.mode {
+            InputMode::Search => " [/] ",
+            InputMode::Rename => " [rename] ",
+            InputMode::EditTag => " [edit tag] ",
+            InputMode::Normal => " ",
         };
 
         let block = Block::default()
             .borders(Borders::ALL)
-            .title(format!(" Library [{mode_title}] "))
-            .border_style(if is_focus {
+            .title(format!(" Library{mode_suffix}"))
+            .border_style(if is_active {
                 Style::default().fg(Color::Green)
             } else {
-                Style::default()
+                Style::default().fg(Color::Rgb(70, 70, 95))
             });
 
-        let items: Vec<ListItem<'_>> = self
-            .library_rows_for_width(app, content_width)
+        let current_id = app.playback_state().current_track_id;
+        let rows: Vec<String> = self.library_rows_for_width(app, content_width).to_vec();
+        let items: Vec<ListItem<'_>> = rows
             .iter()
-            .map(|row| ListItem::new(row.as_str()))
+            .enumerate()
+            .map(|(i, row)| {
+                let id = self.library_cached_track_ids.get(i).copied();
+                if id.is_some() && id == current_id {
+                    ListItem::new(row.as_str()).style(
+                        Style::default()
+                            .fg(Color::Rgb(255, 210, 80))
+                            .add_modifier(Modifier::BOLD),
+                    )
+                } else {
+                    ListItem::new(row.as_str())
+                }
+            })
             .collect();
 
         let mut state = ListState::default();
@@ -159,7 +186,7 @@ impl UiState {
             .border_style(if matches!(self.focus, FocusPanel::Queue) {
                 Style::default().fg(Color::Yellow)
             } else {
-                Style::default()
+                Style::default().fg(Color::Rgb(70, 70, 95))
             });
 
         let items: Vec<ListItem<'_>> = if queue_len == 0 {
@@ -230,7 +257,14 @@ impl UiState {
         let paragraph = Paragraph::new(lines).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(" Now Playing "),
+                .title(" Now Playing ")
+                .border_style(if app.is_actively_playing() {
+                    Style::default().fg(Color::Green)
+                } else if app.current_track().is_some() {
+                    Style::default().fg(Color::Yellow)
+                } else {
+                    Style::default().fg(Color::Rgb(70, 70, 95))
+                }),
         );
         f.render_widget(paragraph, area);
     }
@@ -239,7 +273,7 @@ impl UiState {
         match self.visualizer_mode {
             VisualizerMode::Cava => self.draw_cava_visualizer(f, area, app),
             VisualizerMode::Clock => self.draw_clock_visualizer(f, area),
-        VisualizerMode::CMatrix => self.draw_cmatrix_visualizer(f, area, app),
+            VisualizerMode::CMatrix => self.draw_cmatrix_visualizer(f, area, app),
         }
     }
 
@@ -475,27 +509,8 @@ impl UiState {
             0.0
         };
 
-        let label = if self.mode == InputMode::Search {
-            format!("/{}", self.search_input)
-        } else if self.mode == InputMode::Rename {
-            let field = match self.rename_kind {
-                RenameKind::Title => "Title",
-                RenameKind::Artist => "Artist",
-            };
-            let track_id_label = self
-                .rename_track_id
-                .map(|id| format!("#{} ", id))
-                .unwrap_or_default();
-            format!("Rename {} {}→ {}_", field, track_id_label, self.rename_input)        } else if self.mode == InputMode::EditTag {
-            let field_name = ["Title", "Artist", "Album"][self.edit_tag_field];
-            let value = &self.edit_tag_inputs[self.edit_tag_field];
-            format!("Edit Tag [{}] \u{2192} {}_", field_name, value)        } else {
-            format!(
-                "{}s / {}s",
-                app.playback_state().position_secs,
-                current_duration
-            )
-        };
+        let pos = app.playback_state().position_secs;
+        let label = format!("{} / {}", Self::fmt_duration(pos), Self::fmt_duration(current_duration));
 
         let label_width = area.width.saturating_sub(2) as usize;
         let label = Self::fixed_width_text(&label, label_width);
@@ -552,6 +567,33 @@ impl UiState {
 
         f.render_widget(Clear, popup_area);
         f.render_widget(paragraph, popup_area);
+    }
+
+    fn draw_statusbar(&self, f: &mut ratatui::Frame<'_>, area: Rect) {
+        let text = match self.mode {
+            InputMode::Search => format!(" /{}_ ", self.search_input),
+            InputMode::Rename => {
+                let field = match self.rename_kind {
+                    RenameKind::Title => "Title",
+                    RenameKind::Artist => "Artist",
+                };
+                let id = self.rename_track_id.map(|id| format!("#{} ", id)).unwrap_or_default();
+                format!(" Rename {} {}→ {}_ ", field, id, self.rename_input)
+            }
+            InputMode::EditTag => {
+                let field_name = ["Title", "Artist", "Album"][self.edit_tag_field];
+                let value = &self.edit_tag_inputs[self.edit_tag_field];
+                format!(" Edit Tag [{}] → {}_ ", field_name, value)
+            }
+            InputMode::Normal => format!(" {} ", self.status),
+        };
+        let p = Paragraph::new(text).style(Style::default().fg(Color::Rgb(190, 190, 215)));
+        f.render_widget(p, area);
+    }
+
+    fn fmt_duration(secs: i64) -> String {
+        let s = secs.max(0);
+        format!("{:02}:{:02}", s / 60, s % 60)
     }
 
     fn fixed_width_text(text: &str, width: usize) -> String {
