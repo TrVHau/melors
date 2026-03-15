@@ -273,6 +273,20 @@ impl App {
         Ok(Some(removed))
     }
 
+    pub fn move_queue_index(&mut self, index: usize, delta: isize) -> Result<Option<usize>> {
+        if index >= self.session.queue.len() {
+            return Ok(None);
+        }
+        let next = (index as isize + delta).clamp(0, self.session.queue.len() as isize - 1);
+        let next = next as usize;
+        if next == index {
+            return Ok(Some(index));
+        }
+        self.session.queue.swap(index, next);
+        self.persist_queue()?;
+        Ok(Some(next))
+    }
+
     pub fn play_queue_index(&mut self, index: usize) -> Result<Option<i64>> {
         if let Some(track_id) = self.session.queue.get(index).copied() {
             self.play_track(track_id)?;

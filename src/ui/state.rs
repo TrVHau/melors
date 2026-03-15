@@ -10,7 +10,6 @@ use crate::features::search::search_tracks;
 
 #[derive(Debug, Clone, Copy)]
 pub enum FocusPanel {
-    Sidebar,
     Library,
     Queue,
 }
@@ -36,6 +35,36 @@ pub enum VisualizerMode {
     CMatrix,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiTheme {
+    Neon,
+    Amber,
+    Mono,
+    Forest,
+}
+
+impl UiTheme {
+    pub fn cycle(self) -> Self {
+        match self {
+            Self::Neon => Self::Amber,
+            Self::Amber => Self::Mono,
+            Self::Mono => Self::Forest,
+            Self::Forest => Self::Neon,
+        }
+    }
+}
+
+impl fmt::Display for UiTheme {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Neon => write!(f, "Neon"),
+            Self::Amber => write!(f, "Amber"),
+            Self::Mono => write!(f, "Mono"),
+            Self::Forest => write!(f, "Forest"),
+        }
+    }
+}
+
 impl fmt::Display for VisualizerMode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -49,6 +78,7 @@ impl fmt::Display for VisualizerMode {
 pub struct UiState {
     pub focus: FocusPanel,
     pub mode: InputMode,
+    pub theme: UiTheme,
     pub visualizer_mode: VisualizerMode,
     pub visualizer_last_update_ms: u128,
     pub cava_cached_levels: Vec<(f32, f32)>,
@@ -89,6 +119,7 @@ impl UiState {
         Self {
             focus: FocusPanel::Library,
             mode: InputMode::Normal,
+            theme: UiTheme::Neon,
             visualizer_mode: VisualizerMode::Cava,
             visualizer_last_update_ms: 0,
             cava_cached_levels: Vec::new(),
@@ -129,7 +160,13 @@ impl UiState {
         self.visualizer_mode = mode;
     }
 
+    pub fn cycle_theme(&mut self) -> UiTheme {
+        self.theme = self.theme.cycle();
+        self.theme
+    }
+
     pub fn enter_search_mode(&mut self) {
+        self.focus = FocusPanel::Library;
         self.mode = InputMode::Search;
         self.search_input.clear();
         self.library_selected = 0;
@@ -234,25 +271,15 @@ impl UiState {
         &self.queue_cached_render_rows
     }
 
-    pub fn focus_left(&mut self) {
-        self.focus = match self.focus {
-            FocusPanel::Sidebar => FocusPanel::Sidebar,
-            FocusPanel::Library => FocusPanel::Sidebar,
-            FocusPanel::Queue => FocusPanel::Library,
-        };
-    }
-
     pub fn focus_right(&mut self) {
         self.focus = match self.focus {
-            FocusPanel::Sidebar => FocusPanel::Library,
             FocusPanel::Library => FocusPanel::Queue,
-            FocusPanel::Queue => FocusPanel::Queue,
+            FocusPanel::Queue => FocusPanel::Library,
         };
     }
 
     pub fn move_selection(&mut self, app: &App, delta: isize) {
         let len = match self.focus {
-            FocusPanel::Sidebar => 0,
             FocusPanel::Library => self.visible_track_ids(app).len(),
             FocusPanel::Queue => self.queue_track_ids(app).len(),
         };
@@ -261,20 +288,17 @@ impl UiState {
             match self.focus {
                 FocusPanel::Library => self.library_selected = 0,
                 FocusPanel::Queue => self.queue_selected = 0,
-                FocusPanel::Sidebar => {}
             }
             return;
         }
 
         let current = match self.focus {
-            FocusPanel::Sidebar => 0,
             FocusPanel::Library => self.library_selected,
             FocusPanel::Queue => self.queue_selected,
         } as isize;
         let next = (current + delta).clamp(0, len as isize - 1);
 
         match self.focus {
-            FocusPanel::Sidebar => {}
             FocusPanel::Library => self.library_selected = next as usize,
             FocusPanel::Queue => self.queue_selected = next as usize,
         }

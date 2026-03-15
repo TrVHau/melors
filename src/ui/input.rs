@@ -28,6 +28,11 @@ impl UiState {
                     self.status = String::from("Visualizer: CMatrix");
                     return Ok(false);
                 }
+                KeyCode::Char('t') | KeyCode::Char('T') => {
+                    let theme = self.cycle_theme();
+                    self.status = format!("Theme: {}", theme);
+                    return Ok(false);
+                }
                 _ => {}
             }
         }
@@ -46,8 +51,24 @@ impl UiState {
 
         match key.code {
             KeyCode::Char('q') => return Ok(true),
-            KeyCode::BackTab => self.focus_left(),
+            KeyCode::BackTab => self.focus_right(),
             KeyCode::Tab => self.focus_right(),
+            KeyCode::Up if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                if matches!(self.focus, FocusPanel::Queue)
+                    && let Some(next) = app.move_queue_index(self.queue_selected, -1)?
+                {
+                    self.queue_selected = next;
+                    self.status = format!("Moved queue item to #{}", next + 1);
+                }
+            }
+            KeyCode::Down if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                if matches!(self.focus, FocusPanel::Queue)
+                    && let Some(next) = app.move_queue_index(self.queue_selected, 1)?
+                {
+                    self.queue_selected = next;
+                    self.status = format!("Moved queue item to #{}", next + 1);
+                }
+            }
             KeyCode::Down => self.move_selection(app, 1),
             KeyCode::Up => self.move_selection(app, -1),
             KeyCode::Enter => match self.focus {
@@ -183,7 +204,7 @@ impl UiState {
                 self.edit_tag_field = (self.edit_tag_field + 1) % 3;
             }
             KeyCode::BackTab => {
-                self.edit_tag_field = (self.edit_tag_field + 2) % 3;
+                self.edit_tag_field = (self.edit_tag_field + 1) % 3;
             }
             KeyCode::Enter => {
                 if let Some(track_id) = self.edit_tag_track_id {
