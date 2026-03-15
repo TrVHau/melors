@@ -27,11 +27,11 @@ cargo run --release
 ```
 src/
 ├── main.rs
-├── app/          — App struct, session state, all action methods
-├── core/         — config loader, shared value types (Track, PlaybackState)
-├── features/     — player (rodio + FFT), queue logic, fuzzy search
-├── services/     — file scanner, ID3 metadata reader, SQLite storage layer
-└── ui/           — ratatui rendering, input dispatch, UI state and caches
+├── app/          — app state + action modules
+├── core/         — config modules + shared models
+├── features/     — player, queue, search logic
+├── services/     — scanner, metadata, storage modules
+└── ui/           — input, render, and state submodules
 ```
 
 See [architecture.md](architecture.md) for the full module breakdown.
@@ -72,6 +72,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 | -------- | --------------------------------- |
 | Config   | `~/.config/melors/config.toml`    |
 | Database | `~/.local/share/melors/db.sqlite` |
+| Cache    | `~/.cache/melors/`                |
 | Music    | `~/Music/melors/`                 |
 
 To reset state, delete the database file and relaunch.
@@ -79,8 +80,8 @@ To point at a test music folder, edit `music_dir` in the config.
 
 ## Adding a New Action
 
-1. Add the method to `src/app/actions.rs` (takes `&mut self`, returns `Result<_>`).
-2. Wire the key in `src/ui/input.rs` inside `handle_key` or an input handler.
-3. Add any required storage method to `src/services/storage.rs`.
-4. If UI state needs updating, add or update fields in `src/ui/state.rs`.
+1. Add the method to the appropriate action module in `src/app/actions/` (takes `&mut self`, returns `Result<_>`).
+2. Wire the key in the appropriate input module in `src/ui/input/` (`normal.rs`, `modes.rs`, or `dispatch.rs`).
+3. Add any required persistence method in `src/services/storage/`.
+4. If UI state needs updating, modify `src/ui/state/model.rs` and related state helpers.
 5. Run `cargo clippy --all-targets --all-features -- -D warnings` to validate.

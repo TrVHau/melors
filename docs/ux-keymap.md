@@ -19,11 +19,12 @@ Search mode and the rename input during Rename mode.
 
 ## Input Modes
 
-| Mode     | Trigger              | Description                                          |
-| -------- | -------------------- | ---------------------------------------------------- |
-| `Normal` | default / `Esc`      | Browse and control playback                          |
-| `Search` | `s`                  | Type a query; library filters in real time           |
-| `Rename` | `m` / `M` on a track | Edit selected track title/file (`m`) or artist (`M`) |
+| Mode      | Trigger              | Description                                          |
+| --------- | -------------------- | ---------------------------------------------------- |
+| `Normal`  | default / `Esc`      | Browse and control playback                          |
+| `Search`  | `s`                  | Type a query; library filters in real time           |
+| `Rename`  | `m` / `M` on a track | Edit selected track title/file (`m`) or artist (`M`) |
+| `EditTag` | `t` on a track       | Edit ID3 fields (title, artist, album) and save back |
 
 ## Keybindings
 
@@ -39,13 +40,12 @@ Search mode and the rename input during Rename mode.
 
 #### Navigation
 
-| Key         | Action                           |
-| ----------- | -------------------------------- |
-| `↑` / `↓`   | Move selection up / down         |
-| `Tab`       | Focus next panel                 |
-| `Shift+Tab` | Focus previous panel             |
-| `Enter`     | Play selected track / queue item |
-| `q`         | Quit                             |
+| Key       | Action                           |
+| --------- | -------------------------------- |
+| `↑` / `↓` | Move selection up / down         |
+| `Tab`     | Focus next panel (cycles)        |
+| `Enter`   | Play selected track / queue item |
+| `q`       | Quit                             |
 
 #### Playback
 
@@ -70,7 +70,24 @@ Search mode and the rename input during Rename mode.
 | `x` | Remove selected item from queue       |
 | `m` | Enter Rename mode on selected track   |
 | `M` | Enter Rename mode for selected artist |
+| `t` | Enter tag edit mode                   |
 | `r` | Rescan library from disk              |
+
+#### Queue actions
+
+| Key       | Action                        |
+| --------- | ----------------------------- |
+| `Shift+↑` | Move selected queue item up   |
+| `Shift+↓` | Move selected queue item down |
+
+#### Theme and visualizer
+
+| Key     | Action                |
+| ------- | --------------------- |
+| `Alt+1` | Visualizer: Cava      |
+| `Alt+2` | Visualizer: Clock     |
+| `Alt+3` | Visualizer: CMatrix   |
+| `Alt+T` | Cycle UI theme preset |
 
 ### Search mode
 
@@ -90,6 +107,16 @@ Search mode and the rename input during Rename mode.
 | `Backspace` | Delete last character                                         |
 | `Enter`     | Confirm: apply title/file rename (`m`) or artist rename (`M`) |
 | `Esc`       | Cancel; no changes made                                       |
+
+### EditTag mode
+
+| Key         | Action                                        |
+| ----------- | --------------------------------------------- |
+| Any char    | Edit current field                            |
+| `Backspace` | Delete last character in current field        |
+| `Tab`       | Move to next field (Title -> Artist -> Album) |
+| `Enter`     | Save all fields to file tags and database     |
+| `Esc`       | Cancel; no changes made                       |
 
 ## Interaction Principles
 

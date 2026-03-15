@@ -5,6 +5,9 @@
 `melors` is a fast, local-first terminal music player for personal MP3 libraries. It runs entirely
 in the terminal, requires no cloud account, and is controlled fully from the keyboard.
 
+Current UX includes multi-panel browsing (Library, Queue, Now Playing, Visualizer),
+theme presets, fuzzy search, queue management, and in-app metadata editing.
+
 It is built for Linux and macOS users who prefer keyboard-centric workflows and want a polished TUI
 rather than a plain CLI.
 
@@ -36,6 +39,7 @@ files and keyboard navigation as first-class concerns.
 | Music folder | `~/Music/melors/`                 |
 | Config       | `~/.config/melors/config.toml`    |
 | Database     | `~/.local/share/melors/db.sqlite` |
+| Cache        | `~/.cache/melors/`                |
 
 All paths are configurable via `config.toml`.
 

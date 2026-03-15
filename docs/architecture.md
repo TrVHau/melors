@@ -4,30 +4,63 @@
 
 ```
 src/
-├── main.rs              — entry point; sets up App, terminal, and event loop
+├── main.rs                 — terminal bootstrap + event loop
 ├── app/
-│   ├── mod.rs           — App struct; owns all subsystems
-│   ├── state.rs         — AppSession (tracks, queue, playback_state and version counters)
-│   └── actions.rs       — all public mutations: play, seek, rename, queue ops, persistence
+│   ├── mod.rs              — App facade and composition root
+│   ├── state.rs            — AppSession and in-memory state versions
+│   └── actions/
+│       ├── mod.rs
+│       ├── boot.rs         — startup/bootstrap actions
+│       ├── playback.rs     — play/pause/seek/volume/repeat/shuffle
+│       ├── queue.rs        — queue add/remove/reorder operations
+│       ├── library.rs      — scan + library sync actions
+│       ├── rename.rs       — rename and metadata update actions
+│       └── session.rs      — persistence/readback of session state
 ├── core/
 │   ├── mod.rs
-│   ├── config.rs        — reads/writes ~/.config/melors/config.toml
-│   └── model.rs         — Track, PlaybackState, RepeatMode value types
+│   ├── model.rs            — Track, PlaybackState, RepeatMode
+│   └── config/
+│       ├── mod.rs
+│       ├── load.rs         — config load/save logic
+│       └── paths.rs        — XDG/app path resolution
 ├── features/
 │   ├── mod.rs
-│   ├── player.rs        — rodio sink wrapper; FFT analysis; volume; seek
-│   ├── queue.rs         — queue ordering logic (shuffle, repeat)
-│   └── search.rs        — fuzzy search over tracks using fuzzy-matcher
+│   ├── queue.rs            — queue traversal and play order rules
+│   ├── search.rs           — fuzzy search
+│   └── player/
+│       ├── mod.rs
+│       ├── control.rs      — rodio playback control
+│       └── analysis.rs     — FFT analysis + visualizer buffers
 ├── services/
 │   ├── mod.rs
-│   ├── scanner.rs       — walkdir scan; mtime-based incremental updates
-│   ├── metadata.rs      — ID3 tag extraction with filename-stem fallback
-│   └── storage.rs       — SQLite access layer (tracks, queue, playback state)
+│   ├── metadata.rs         — ID3 read/write helpers
+│   ├── scanner/
+│   │   ├── mod.rs
+│   │   ├── io.rs           — directory walking and file IO helpers
+│   │   └── validate.rs     — scan target and path validation
+│   └── storage/
+│       ├── mod.rs
+│       ├── migrations.rs   — schema creation/migration
+│       ├── tracks.rs       — track CRUD
+│       ├── playback.rs     — playback state persistence
+│       └── queue.rs        — queue state persistence
 └── ui/
-    ├── mod.rs
-    ├── state.rs         — UiState: focus, InputMode, row caches, visualizer state
-    ├── input.rs         — key event dispatch; search / rename input handlers
-    └── render.rs        — ratatui draw functions for each panel
+  ├── mod.rs
+  ├── input/
+  │   ├── dispatch.rs     — mode-aware key dispatch
+  │   ├── normal.rs       — normal-mode key handlers
+  │   ├── modes.rs        — search/rename/tag-edit mode handlers
+  │   └── selection.rs    — selection/focus navigation helpers
+  ├── render/
+  │   ├── chrome.rs       — tabs, borders, status chrome
+  │   ├── lists.rs        — library/queue tables
+  │   ├── playback.rs     — now playing + progress
+  │   ├── visualizer.rs   — visualizer widgets
+  │   └── theme.rs        — palette definitions
+  └── state/
+    ├── model.rs        — UiState shape and fields
+    ├── mode.rs         — InputMode transitions
+    └── cache.rs        — row cache update/invalidation
 ```
 
 ## Data Flow
@@ -56,7 +89,7 @@ src/
 
 ## Threading Model
 
-The app runs on a **single thread**. There are no background threads or async runtime.
+The app runs on a mostly **single-threaded** event loop.
 
 - FFT analysis is submitted to a lightweight `std::thread::spawn` per file and results
   are polled each frame via an `mpsc` channel.
@@ -121,90 +154,3 @@ Three modes are rendered natively in ratatui — no external processes:
 - `ui`: ratatui rendering + input handling
 - `storage`: SQLite persistence and migrations
 - `config`: load/save app configuration
-
-## Data flow
-
-1. App boot
-2. Load config and open DB
-3. Run migrations
-4. Restore persisted playback/session state
-5. Start scan task
-   - first run: full scan
-   - later runs: incremental scan
-6. Build/update library model
-7. Render TUI and accept input
-8. Route actions to player/queue/search/storage
-
-## Runtime model
-
-Recommended runtime split:
-
-- UI thread: input + rendering
-- worker tasks:
-  - scanner updates
-  - metadata extraction
-  - DB writes
-  - playback event updates
-
-Use message passing between UI and workers to keep UI responsive.
-
-## Storage model (SQLite)
-
-Suggested tables (initial shape):
-
-- `tracks`
-  - id
-  - path (unique)
-  - mtime
-  - hash (optional)
-  - title
-  - artist
-  - album
-  - duration
-  - favorite (bool)
-  - play_count
-  - last_played_at
-- `queue_state`
-  - id
-  - position
-  - track_id
-- `playback_state`
-  - current_track_id
-  - position_secs
-  - shuffle_enabled
-  - repeat_mode
-  - updated_at
-- `playlists`
-  - id
-  - name
-  - created_at
-- `playlist_items`
-  - playlist_id
-  - track_id (nullable if missing)
-  - original_path
-  - is_missing
-  - order_index
-- `schema_migrations`
-  - version
-  - applied_at
-
-## Scan reconciliation rules
-
-During incremental scan:
-
-- track exists in FS + changed mtime: re-read metadata and update record
-- track exists in DB but missing in FS: mark/remove according to feature rule
-- new path in FS not in DB: insert new track
-
-## UI stack
-
-- TUI: `ratatui`
-- Terminal backend: `crossterm`
-- Audio backend target: `rodio`
-
-## Future extension points
-
-- visualizer pipeline (post-MVP)
-- playlist UX improvements
-- watcher-based live update
-- theme system
