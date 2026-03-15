@@ -1,5 +1,9 @@
 use std::cmp::min;
+use std::collections::hash_map::DefaultHasher;
 use std::fmt;
+use std::hash::{Hash, Hasher};
+
+use fuzzy_matcher::skim::SkimMatcherV2;
 
 use crate::app::App;
 use crate::features::search::search_tracks;
@@ -63,6 +67,11 @@ pub struct UiState {
     library_cached_rows: Vec<String>,
     library_render_width: usize,
     library_cached_render_rows: Vec<String>,
+    matcher: SkimMatcherV2,
+    seed_cache_valid: bool,
+    seed_cached_track_id: Option<i64>,
+    seed_cached_tracks_version: u64,
+    seed_cached_value: u64,
     queue_cache_tracks_version: u64,
     queue_cache_version: u64,
     queue_cache_current_track_id: Option<i64>,
@@ -95,6 +104,11 @@ impl UiState {
             library_cached_rows: Vec::new(),
             library_render_width: 0,
             library_cached_render_rows: Vec::new(),
+            matcher: SkimMatcherV2::default(),
+            seed_cache_valid: false,
+            seed_cached_track_id: None,
+            seed_cached_tracks_version: 0,
+            seed_cached_value: 0,
             queue_cache_tracks_version: 0,
             queue_cache_version: 0,
             queue_cache_current_track_id: None,
@@ -261,7 +275,7 @@ impl UiState {
         self.library_cached_rows.clear();
 
         if self.is_filtering_library() {
-            let tracks = search_tracks(app.tracks(), &self.search_input);
+            let tracks = search_tracks(&self.matcher, app.tracks(), &self.search_input);
             self.library_cached_track_ids.reserve(tracks.len());
             self.library_cached_rows.reserve(tracks.len());
             for track in tracks {
@@ -362,6 +376,34 @@ impl UiState {
         self.queue_cache_current_track_id = current_track_id;
         self.queue_render_width = 0;
         self.queue_cached_render_rows.clear();
+    }
+
+    pub fn cached_track_seed(&mut self, app: &App) -> u64 {
+        let current_track_id = app.playback_state().current_track_id;
+        let tracks_version = app.tracks_version();
+        if self.seed_cache_valid
+            && self.seed_cached_track_id == current_track_id
+            && self.seed_cached_tracks_version == tracks_version
+        {
+            return self.seed_cached_value;
+        }
+        let mut hasher = DefaultHasher::new();
+        if let Some(track) = app.current_track() {
+            track.id.hash(&mut hasher);
+            track.path.hash(&mut hasher);
+            track.title.hash(&mut hasher);
+            track.artist.hash(&mut hasher);
+            track.album.hash(&mut hasher);
+            track.duration_secs.hash(&mut hasher);
+        } else {
+            0u64.hash(&mut hasher);
+        }
+        let value = hasher.finish();
+        self.seed_cache_valid = true;
+        self.seed_cached_track_id = current_track_id;
+        self.seed_cached_tracks_version = tracks_version;
+        self.seed_cached_value = value;
+        value
     }
 
     fn fixed_width_cell(text: &str, width: usize) -> String {

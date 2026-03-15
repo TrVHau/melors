@@ -1,6 +1,4 @@
 use std::cmp::min;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::Local;
@@ -127,7 +125,8 @@ impl UiState {
             .block(block)
             .highlight_style(
                 Style::default()
-                    .bg(Color::DarkGray)
+                    .bg(Color::Green)
+                    .fg(Color::Black)
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("-> ");
@@ -174,7 +173,8 @@ impl UiState {
             .block(block)
             .highlight_style(
                 Style::default()
-                    .bg(Color::DarkGray)
+                    .bg(Color::Yellow)
+                    .fg(Color::Black)
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("-> ");
@@ -234,7 +234,7 @@ impl UiState {
         match self.visualizer_mode {
             VisualizerMode::Cava => self.draw_cava_visualizer(f, area, app),
             VisualizerMode::Clock => self.draw_clock_visualizer(f, area),
-            VisualizerMode::CMatrix => self.draw_cmatrix_visualizer(f, area, app),
+        VisualizerMode::CMatrix => self.draw_cmatrix_visualizer(f, area, app),
         }
     }
 
@@ -340,14 +340,14 @@ impl UiState {
         f.render_widget(paragraph, area);
     }
 
-    fn draw_cmatrix_visualizer(&self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
+    fn draw_cmatrix_visualizer(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
         let inner = self.visualizer_inner(area);
         let width = inner.width.max(1) as usize;
         let height = inner.height.max(1) as usize;
         let tick = self.visualizer_tick() as usize;
         let position = app.playback_state().position_secs.max(0) as usize;
         let charset = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        let seed = self.track_seed(app) as usize;
+        let seed = self.cached_track_seed(app) as usize;
 
         let mut lines = Vec::with_capacity(height);
         for row in 0..height {
@@ -401,21 +401,6 @@ impl UiState {
             vertical: 1,
             horizontal: 1,
         })
-    }
-
-    fn track_seed(&self, app: &App) -> u64 {
-        let mut hasher = DefaultHasher::new();
-        if let Some(track) = app.current_track() {
-            track.id.hash(&mut hasher);
-            track.path.hash(&mut hasher);
-            track.title.hash(&mut hasher);
-            track.artist.hash(&mut hasher);
-            track.album.hash(&mut hasher);
-            track.duration_secs.hash(&mut hasher);
-        } else {
-            app.playback_state().position_secs.hash(&mut hasher);
-        }
-        hasher.finish()
     }
 
     fn big_clock_lines(&self, text: &str) -> Vec<String> {

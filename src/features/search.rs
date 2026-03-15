@@ -3,12 +3,15 @@ use fuzzy_matcher::skim::SkimMatcherV2;
 
 use crate::core::model::Track;
 
-pub fn search_tracks<'a>(tracks: &'a [Track], keyword: &str) -> Vec<&'a Track> {
+pub fn search_tracks<'a>(
+    matcher: &SkimMatcherV2,
+    tracks: &'a [Track],
+    keyword: &str,
+) -> Vec<&'a Track> {
     if keyword.trim().is_empty() {
         return tracks.iter().collect();
     }
 
-    let matcher = SkimMatcherV2::default();
     let mut scored: Vec<(&Track, i64)> = tracks
         .iter()
         .filter_map(|track| {

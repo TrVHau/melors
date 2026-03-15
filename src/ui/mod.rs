@@ -45,10 +45,10 @@ pub fn run(app: &mut App) -> Result<()> {
             app.refresh_playback_position()?;
             terminal.draw(|frame| ui.draw(frame, app))?;
 
-            let poll_ms = if matches!(ui.visualizer_mode, VisualizerMode::Cava) {
-                16
-            } else {
-                33
+            let poll_ms = match ui.visualizer_mode {
+                VisualizerMode::Cava => 16,
+                VisualizerMode::CMatrix => 33,
+                VisualizerMode::Clock => 1000,
             };
 
             if event::poll(Duration::from_millis(poll_ms))?
