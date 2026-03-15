@@ -7,6 +7,7 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/TrVHau/melors"
 homepage = "https://github.com/TrVHau/melors"
+documentation = "https://docs.rs/melors"
 keywords = ["mp3", "terminal", "tui", "music-player", "ratatui"]
 categories = ["command-line-utilities", "multimedia::audio"]
 rust-version = "1.85"
