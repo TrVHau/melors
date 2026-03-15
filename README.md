@@ -1,151 +1,154 @@
 # melors
 
-> A keyboard-driven terminal music player for local MP3 libraries, written in Rust.
+Keyboard-first terminal MP3 player written in Rust.
 
-```
-┌─ Library [Normal] ───────────────────────────────┐ ┌─ Queue ─────────────────┐
-│-> * #0042 Tame Impala - Let It Happen            │ │  #0042 Let It Happen    │
-│   * #0089 Radiohead - Reckoner                   │ │  #0089 Reckoner         │
-│     #0103 Mac DeMarco - Chamber of Reflection    │ │  #0103 Chamber of...    │
-│     #0211 LCD Soundsystem - All My Friends       │ │                         │
-├─ Now Playing ────────────────────────────────────┤ ├─ Visualizer [Cava] ─────┤
-│ Track: Tame Impala - Let It Happen               │ │ ██   ██ ▓▓ ██           │
-│ Album: Currents | Repeat: off | Shuffle: Off     │ │ ██ ██ ██ ██ ██ ██       │
-│ Volume: 80%  Status: Playing                     │ │ ████████████████████    │
-├─ Progress ───────────────────────────────────────┤ │ -  -  -  -  -  -  -    │
-│ [████████████░░░░░░░░░░░░░░░ 142s / 467s       ] │ └─────────────────────────┘
-└──────────────────────────────────────────────────┘
-```
+## Highlights
 
-## Features
+- Local-only MP3 library scanning
+- Fast keyboard workflow (no mouse)
+- Search + queue + now playing panels
+- Persistent playback state and queue
+- Theme presets and visualizer modes
+- Tag editing (title/artist/album) from TUI
 
-- **Local-first** — scans `~/Music/melors/` on startup; no cloud, no accounts
-- **Full keyboard control** — every action has a key binding, no mouse required
-- **Fuzzy search** — matches across title, artist, and album in real time
-- **Session persistence** — queue, playback position, repeat mode, and shuffle resume across restarts
-- **Favorites & play counts** — mark tracks and track how often you play them
-- **Inline rename** — rename track titles/files and artist metadata from the TUI
-- **Visualizer panel** — three built-in modes: spectrum bars (Cava), big clock, and CMatrix rain
-- **Volume control** — per-session volume adjustment
-- **Zero config to start** — sane defaults, directories created automatically
-
-## Requirements
-
-- Rust stable (≥ 1.85)
-- Linux: ALSA headers (`libasound2-dev` on Debian/Ubuntu)
-- macOS: CoreAudio (no extra packages needed)
-
-## Install
+## Quick Start
 
 ```bash
 git clone https://github.com/TrVHau/melors
 cd melors
-cargo build --release
-# binary is at target/release/melors
-```
-
-Or run directly:
-
-```bash
 cargo run --release
 ```
 
-## Paths
+## Runtime Paths
 
-All directories are created on first launch — nothing to configure upfront.
+Created automatically on first run:
 
-| Purpose      | Path                              |
-| ------------ | --------------------------------- |
-| Music folder | `~/Music/melors/`                 |
-| Config       | `~/.config/melors/config.toml`    |
-| Database     | `~/.local/share/melors/db.sqlite` |
+- Config: `~/.config/melors/config.toml`
+- Database: `~/.local/share/melors/db.sqlite`
+- Cache: `~/.cache/melors/`
+- Default music dir: `~/Music/melors/`
 
-Drop `.mp3` files into `~/Music/melors/` and start the app. Press `r` at any time to rescan.
+Drop `.mp3` files in your music dir and press `r` to rescan anytime.
 
 ## Configuration
 
-`~/.config/melors/config.toml` is created with defaults on first run:
+`~/.config/melors/config.toml`
 
 ```toml
 music_dir = "/home/you/Music/melors"
 ```
 
-Change `music_dir` to any path containing your MP3 collection.
-
 ## Keybindings
 
-### Navigation
+### App and Navigation
 
-| Key         | Action                             |
-| ----------- | ---------------------------------- |
-| `↑` / `↓`   | Move selection up / down           |
-| `Tab`       | Focus next panel (Library → Queue) |
-| `Shift+Tab` | Focus previous panel               |
-| `Enter`     | Play selected track or queue item  |
-| `q`         | Quit                               |
+- `q`: quit
+- `Tab`: cycle panel focus (`Library <-> Queue`)
+- `Up` / `Down`: move selection
+- `Enter`: play selected track/queue item
 
 ### Playback
 
-| Key                   | Action           |
-| --------------------- | ---------------- |
-| `Space`               | Play / pause     |
-| `n`                   | Next track       |
-| `p`                   | Previous track   |
-| `←` / `→`             | Seek −5s / +5s   |
-| `Shift+←` / `Shift+→` | Seek −10s / +10s |
-| `[` / `]`             | Volume down / up |
+- `Space`: play/pause
+- `n`: next track
+- `p`: previous track
+- `Left` / `Right`: seek -5s / +5s
+- `Shift+Left` / `Shift+Right`: seek -10s / +10s
+- `[` / `]`: volume down/up
 
-### Library & Queue
+### Library and Queue
 
-| Key | Action                              |
-| --- | ----------------------------------- |
-| `s` | Open search                         |
-| `f` | Toggle favorite on selected track   |
-| `a` | Add selected track to queue         |
-| `x` | Remove selected item from queue     |
-| `m` | Rename selected track               |
-| `M` | Rename selected track artist        |
-| `e` | Cycle repeat mode (off / one / all) |
-| `u` | Toggle shuffle                      |
-| `r` | Rescan library from disk            |
+- `s`: search mode
+- `r`: rescan music directory
+- `f`: toggle favorite on selected track
+- `a`: add selected track to queue
+- `x`: remove selected queue item
+- `Shift+Up` / `Shift+Down` (in Queue): reorder queue item
 
-### Visualizer
+### Metadata Editing
 
-| Key     | Mode          |
-| ------- | ------------- |
-| `Alt+1` | Spectrum bars |
-| `Alt+2` | Big clock     |
-| `Alt+3` | CMatrix rain  |
+- `m`: rename selected track title/file
+- `M`: rename selected track artist
+- `t`: open tag editor (title/artist/album)
 
-## Search
+Tag editor:
 
-Press `s` to enter search mode. Results filter in real time as you type.
+- `Tab`: next field
+- `Enter`: save
+- `Esc`: cancel
 
-| Key         | Action                                   |
-| ----------- | ---------------------------------------- |
-| `↑` / `↓`   | Navigate results                         |
-| `Enter`     | Play selected result and exit search     |
-| `Backspace` | Delete last character                    |
-| `Esc`       | Cancel search and return to full library |
+### Playback Modes and Visualizer
 
-Search scores across track title, artist, and album using fuzzy matching.
+- `e`: cycle repeat (`Off -> One -> All`)
+- `u`: toggle shuffle
+- `Alt+1`: visualizer `Cava`
+- `Alt+2`: visualizer `Clock`
+- `Alt+3`: visualizer `CMatrix`
+- `Alt+T`: cycle UI theme (`Neon -> Amber -> Mono -> Forest`)
 
-## Rename
+## Project Structure
 
-Press `m` on any track in the Library to rename its title/file. Press `M` to
-rename its artist field in the database. The progress bar area becomes a rename
-input field, prefilled with the current value.
+```text
+src/
+	app/
+		actions/
+			boot.rs
+			playback.rs
+			queue.rs
+			library.rs
+			rename.rs
+			session.rs
+		mod.rs
+		state.rs
+	core/
+		config/
+			mod.rs
+			load.rs
+			paths.rs
+		model.rs
+	features/
+		player/
+			mod.rs
+			control.rs
+			analysis.rs
+		search.rs
+	services/
+		scanner/
+			mod.rs
+			io.rs
+			validate.rs
+		storage/
+			mod.rs
+			migrations.rs
+			tracks.rs
+			playback.rs
+			queue.rs
+		metadata.rs
+	ui/
+		input/
+			dispatch.rs
+			normal.rs
+			modes.rs
+			selection.rs
+		render/
+			chrome.rs
+			lists.rs
+			playback.rs
+			visualizer.rs
+			theme.rs
+		state/
+			model.rs
+			mode.rs
+			cache.rs
+```
 
-| Key         | Action                                                           |
-| ----------- | ---------------------------------------------------------------- |
-| Any key     | Edit the name                                                    |
-| `Backspace` | Delete last character                                            |
-| `Enter`     | Confirm — applies title/file rename (`m`) or artist rename (`M`) |
-| `Esc`       | Cancel, no changes made                                          |
+## Development
 
-For `m`, the file is renamed in-place (same directory, same extension, new stem)
-and the library reloads automatically. For `M`, only the artist field is updated.
+```bash
+cargo check
+cargo run
+```
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See `LICENSE`.
