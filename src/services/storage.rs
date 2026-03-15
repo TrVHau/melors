@@ -34,6 +34,8 @@ impl Storage {
                 artist TEXT,
                 album TEXT,
                 duration INTEGER,
+                title_override INTEGER NOT NULL DEFAULT 0,
+                artist_override INTEGER NOT NULL DEFAULT 0,
                 favorite INTEGER NOT NULL DEFAULT 0,
                 play_count INTEGER NOT NULL DEFAULT 0,
                 last_played_at TEXT
@@ -77,6 +79,16 @@ impl Storage {
             "INSERT OR IGNORE INTO playback_state (id, current_track_id, position_secs, shuffle_enabled, repeat_mode) VALUES (1, NULL, 0, 0, 0)",
             [],
         )?;
+
+        // Backfill override columns for older databases.
+        let _ = self.conn.execute(
+            "ALTER TABLE tracks ADD COLUMN title_override INTEGER NOT NULL DEFAULT 0",
+            [],
+        );
+        let _ = self.conn.execute(
+            "ALTER TABLE tracks ADD COLUMN artist_override INTEGER NOT NULL DEFAULT 0",
+            [],
+        );
         Ok(())
     }
 
@@ -89,8 +101,14 @@ impl Storage {
                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
                 ON CONFLICT(path) DO UPDATE SET
                     mtime=excluded.mtime,
-                    title=excluded.title,
-                    artist=excluded.artist,
+                    title=CASE
+                        WHEN tracks.title_override = 1 THEN tracks.title
+                        ELSE excluded.title
+                    END,
+                    artist=CASE
+                        WHEN tracks.artist_override = 1 THEN tracks.artist
+                        ELSE excluded.artist
+                    END,
                     album=excluded.album,
                     duration=excluded.duration
                 ",
@@ -260,7 +278,7 @@ impl Storage {
 
     pub fn rename_track(&self, track_id: i64, new_title: &str, new_path: &str) -> Result<()> {
         self.conn.execute(
-            "UPDATE tracks SET title=?1, path=?2 WHERE id=?3",
+            "UPDATE tracks SET title=?1, path=?2, title_override=1 WHERE id=?3",
             params![new_title, new_path, track_id],
         )?;
         Ok(())
@@ -268,7 +286,7 @@ impl Storage {
 
     pub fn rename_artist(&self, track_id: i64, new_artist: &str) -> Result<()> {
         self.conn.execute(
-            "UPDATE tracks SET artist=?1 WHERE id=?2",
+            "UPDATE tracks SET artist=?1, artist_override=1 WHERE id=?2",
             params![new_artist, track_id],
         )?;
         Ok(())
