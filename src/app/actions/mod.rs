@@ -15,8 +15,10 @@ use super::state::AppSession;
 mod boot;
 mod library;
 mod playback;
+mod playlists;
 mod queue;
 mod rename;
+mod search;
 mod session;
 
 pub(super) const PLAYBACK_PERSIST_DEBOUNCE: Duration = Duration::from_millis(250);

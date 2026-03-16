@@ -1,7 +1,12 @@
 use super::*;
 
 impl UiState {
-    pub(super) fn draw_visualizer_panel(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
+    pub(super) fn draw_visualizer_panel(
+        &mut self,
+        f: &mut ratatui::Frame<'_>,
+        area: Rect,
+        app: &App,
+    ) {
         match self.visualizer_mode {
             VisualizerMode::Cava => self.draw_cava_visualizer(f, area, app),
             VisualizerMode::Clock => self.draw_clock_visualizer(f, area),
@@ -9,7 +14,12 @@ impl UiState {
         }
     }
 
-    pub(super) fn draw_cava_visualizer(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
+    pub(super) fn draw_cava_visualizer(
+        &mut self,
+        f: &mut ratatui::Frame<'_>,
+        area: Rect,
+        app: &App,
+    ) {
         let inner = self.visualizer_inner(area);
         let width = inner.width.max(1) as usize;
         let height = inner.height.max(1) as usize;
@@ -111,7 +121,12 @@ impl UiState {
         f.render_widget(paragraph, area);
     }
 
-    pub(super) fn draw_cmatrix_visualizer(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
+    pub(super) fn draw_cmatrix_visualizer(
+        &mut self,
+        f: &mut ratatui::Frame<'_>,
+        area: Rect,
+        app: &App,
+    ) {
         let inner = self.visualizer_inner(area);
         let width = inner.width.max(1) as usize;
         let height = inner.height.max(1) as usize;

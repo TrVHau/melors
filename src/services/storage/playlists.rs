@@ -23,8 +23,10 @@ impl Storage {
         if playlist_name_exists(&self.conn, &normalized, None)? {
             return Err(anyhow::anyhow!("playlist name already exists"));
         }
-        self.conn
-            .execute("INSERT INTO playlists (name) VALUES (?1)", params![normalized])?;
+        self.conn.execute(
+            "INSERT INTO playlists (name) VALUES (?1)",
+            params![normalized],
+        )?;
         Ok(self.conn.last_insert_rowid())
     }
 
@@ -59,9 +61,9 @@ impl Storage {
     }
 
     pub fn list_playlists(&self) -> Result<Vec<Playlist>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, name, created_at FROM playlists ORDER BY name COLLATE NOCASE ASC")?;
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, created_at FROM playlists ORDER BY name COLLATE NOCASE ASC",
+        )?;
         let rows = stmt.query_map([], |row| {
             Ok(Playlist {
                 id: row.get(0)?,
@@ -335,7 +337,9 @@ mod tests {
             .expect("move");
         assert_eq!(moved, 1);
 
-        let items = storage.load_playlist_items(playlist_id).expect("load items");
+        let items = storage
+            .load_playlist_items(playlist_id)
+            .expect("load items");
         assert_eq!(items.len(), 2);
         assert_eq!(items[0].order_index, 0);
         assert_eq!(items[1].order_index, 1);
@@ -355,10 +359,14 @@ mod tests {
             .add_playlist_item(playlist_id, track_id)
             .expect("seed item");
 
-        let err = storage.remove_playlist_item(playlist_id, 9).expect_err("must fail");
+        let err = storage
+            .remove_playlist_item(playlist_id, 9)
+            .expect_err("must fail");
         assert!(err.to_string().contains("not found"));
 
-        let items = storage.load_playlist_items(playlist_id).expect("load items");
+        let items = storage
+            .load_playlist_items(playlist_id)
+            .expect("load items");
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].order_index, 0);
 

@@ -105,7 +105,9 @@ impl UiState {
                     Span::styled(
                         format!("{}{}: ", prefix, field_names[i]),
                         if self.edit_tag_field == i {
-                            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+                            Style::default()
+                                .fg(Color::Cyan)
+                                .add_modifier(Modifier::BOLD)
                         } else {
                             Style::default().fg(Color::Gray)
                         },

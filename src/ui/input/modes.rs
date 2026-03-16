@@ -62,7 +62,10 @@ impl UiState {
                         RenameKind::Artist => "artist",
                     };
                     match result {
-                        Ok(()) => self.status = format!("Renamed {} #{} -> {}", label, track_id, new_value),
+                        Ok(()) => {
+                            self.status =
+                                format!("Renamed {} #{} -> {}", label, track_id, new_value)
+                        }
                         Err(e) => self.status = format!("Rename failed: {}", e),
                     }
                 }

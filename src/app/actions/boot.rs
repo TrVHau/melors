@@ -93,7 +93,10 @@ impl App {
         }
     }
 
-    fn apply_scan_result(&mut self, scan: crate::services::scanner::ScanResult) -> Result<(usize, usize)> {
+    fn apply_scan_result(
+        &mut self,
+        scan: crate::services::scanner::ScanResult,
+    ) -> Result<(usize, usize)> {
         let upserts = scan.upserts.len();
         self.storage.upsert_tracks(&scan.upserts)?;
         let removed = self.storage.prune_missing_tracks(&scan.seen_paths)?;

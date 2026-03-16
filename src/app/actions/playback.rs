@@ -35,7 +35,12 @@ impl App {
             .session
             .playback_state
             .current_track_id
-            .and_then(|id| self.session.queue.iter().position(|queue_id| *queue_id == id))
+            .and_then(|id| {
+                self.session
+                    .queue
+                    .iter()
+                    .position(|queue_id| *queue_id == id)
+            })
             .unwrap_or(usize::MAX);
 
         let next_idx = if current_idx == usize::MAX {
@@ -63,7 +68,12 @@ impl App {
             .session
             .playback_state
             .current_track_id
-            .and_then(|id| self.session.queue.iter().position(|queue_id| *queue_id == id))
+            .and_then(|id| {
+                self.session
+                    .queue
+                    .iter()
+                    .position(|queue_id| *queue_id == id)
+            })
             .unwrap_or(0);
 
         let prev_idx = if current_idx == 0 { 0 } else { current_idx - 1 };
