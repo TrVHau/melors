@@ -142,7 +142,7 @@ impl UiState {
                         Color::Rgb(0, 120, 0)
                     };
                     spans.push(Span::styled(ch.to_string(), Style::default().fg(color)));
-                } else if (seed + tick + row * 5 + col * 3).is_multiple_of(37) {
+                } else if (seed + tick + row * 5 + col * 3) % 37 == 0 {
                     spans.push(Span::styled(".", Style::default().fg(Color::Rgb(0, 60, 0))));
                 } else {
                     spans.push(Span::raw(" "));

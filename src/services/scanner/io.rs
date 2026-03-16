@@ -30,7 +30,10 @@ pub(super) fn scan_entries(music_dir: &Path) -> Result<ScanResult> {
         let path_text = canonical.to_string_lossy().to_string();
         seen_paths.insert(path_text);
 
-        let mtime = modified_unix_secs(&canonical)?;
+        let mtime = match modified_unix_secs(&canonical) {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
         let tag = metadata::read_metadata(&canonical);
         upserts.push(TrackInput {
             path: canonical,

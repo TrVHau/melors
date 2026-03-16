@@ -18,14 +18,17 @@ impl Storage {
                         WHEN tracks.artist_override = 1 THEN tracks.artist
                         ELSE excluded.artist
                     END,
-                    album=excluded.album,
+                    album=CASE
+                        WHEN tracks.album_override = 1 THEN tracks.album
+                        ELSE excluded.album
+                    END,
                     duration=excluded.duration
                 WHERE
                     tracks.mtime IS NOT excluded.mtime
-                    OR tracks.album IS NOT excluded.album
                     OR tracks.duration IS NOT excluded.duration
                     OR (tracks.title_override = 0 AND tracks.title IS NOT excluded.title)
                     OR (tracks.artist_override = 0 AND tracks.artist IS NOT excluded.artist)
+                    OR (tracks.album_override = 0 AND tracks.album IS NOT excluded.album)
                 ",
             )?;
 

@@ -43,6 +43,9 @@ pub fn run(app: &mut App) -> Result<()> {
     let run_result = (|| -> Result<()> {
         loop {
             app.refresh_playback_position()?;
+            if let Some(status) = app.poll_scan_status() {
+                ui.status = status;
+            }
             terminal.draw(|frame| ui.draw(frame, app))?;
 
             let poll_ms = match ui.visualizer_mode {

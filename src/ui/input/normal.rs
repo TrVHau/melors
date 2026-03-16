@@ -66,8 +66,11 @@ impl UiState {
                 self.status = String::from("Search mode");
             }
             KeyCode::Char('r') => {
-                app.scan_now()?;
-                self.status = String::from("Rescan complete");
+                if app.begin_scan() {
+                    self.status = String::from("Rescan started...");
+                } else {
+                    self.status = String::from("Rescan already running");
+                }
             }
             KeyCode::Char('f') => {
                 if let Some(track_id) = self.selected_track_id(app) {

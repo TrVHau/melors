@@ -139,11 +139,17 @@ impl Player {
     pub fn poll_analysis_results(&mut self) {
         while let Ok((key, analysis)) = self.analysis_rx.try_recv() {
             self.analysis_pending.remove(&key);
-            if self.current_analysis_key.as_ref() == Some(&key) {
-                self.analysis = analysis.clone();
+            self.analysis_active_jobs = self.analysis_active_jobs.saturating_sub(1);
+
+            if let Some(analysis) = analysis {
+                if self.current_analysis_key.as_ref() == Some(&key) {
+                    self.analysis = analysis.clone();
+                }
+                self.insert_analysis_cache(key, analysis);
             }
-            self.insert_analysis_cache(key, analysis);
         }
+
+        self.try_start_analysis_jobs();
     }
 
     pub fn stop(&mut self) {

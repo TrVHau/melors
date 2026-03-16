@@ -13,13 +13,16 @@ impl UiState {
             KeyCode::Enter => {
                 if let Some(track_id) = self.edit_tag_track_id {
                     let title = self.edit_tag_inputs[0].trim().to_string();
-                    if !title.is_empty() {
-                        let artist = self.edit_tag_inputs[1].trim().to_string();
-                        let album = self.edit_tag_inputs[2].trim().to_string();
-                        match app.write_track_tags(track_id, &title, &artist, &album) {
-                            Ok(()) => self.status = format!("Tags saved for #{}", track_id),
-                            Err(e) => self.status = format!("Save failed: {}", e),
-                        }
+                    if title.is_empty() {
+                        self.status = String::from("Save failed: title cannot be empty");
+                        return Ok(false);
+                    }
+
+                    let artist = self.edit_tag_inputs[1].trim().to_string();
+                    let album = self.edit_tag_inputs[2].trim().to_string();
+                    match app.write_track_tags(track_id, &title, &artist, &album) {
+                        Ok(()) => self.status = format!("Tags saved for #{}", track_id),
+                        Err(e) => self.status = format!("Save failed: {}", e),
                     }
                 }
                 self.exit_edit_tag_mode();

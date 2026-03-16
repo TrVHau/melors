@@ -97,13 +97,30 @@ impl Player {
             return;
         }
         self.analysis_pending.insert(key.clone());
+        self.analysis_queue.push_back((path, key));
 
-        let tx = self.analysis_tx.clone();
-        std::thread::spawn(move || {
-            if let Ok(analysis) = Self::analyze_file(&path) {
-                let _ = tx.send((key, analysis));
+        while self.analysis_queue.len() > MAX_QUEUED_ANALYSIS_JOBS {
+            if let Some((_, dropped_key)) = self.analysis_queue.pop_front() {
+                self.analysis_pending.remove(&dropped_key);
             }
-        });
+        }
+
+        self.try_start_analysis_jobs();
+    }
+
+    pub(super) fn try_start_analysis_jobs(&mut self) {
+        while self.analysis_active_jobs < MAX_CONCURRENT_ANALYSIS_JOBS {
+            let Some((path, key)) = self.analysis_queue.pop_front() else {
+                break;
+            };
+
+            self.analysis_active_jobs += 1;
+            let tx = self.analysis_tx.clone();
+            std::thread::spawn(move || {
+                let analysis = Self::analyze_file(&path).ok();
+                let _ = tx.send((key, analysis));
+            });
+        }
     }
 
     fn fft_frame(samples: &VecDeque<f32>, hann_window: &[f32], fft: &dyn Fft<f32>) -> Vec<f32> {

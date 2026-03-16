@@ -17,6 +17,8 @@ const ANALYSIS_BANDS: usize = 36;
 const FFT_WINDOW_SIZE: usize = 1024;
 const FFT_HOP_SIZE: usize = 4096;
 const MAX_ANALYSIS_CACHE_ITEMS: usize = 24;
+const MAX_CONCURRENT_ANALYSIS_JOBS: usize = 2;
+const MAX_QUEUED_ANALYSIS_JOBS: usize = 32;
 
 pub struct Player {
     backend: Backend,
@@ -30,8 +32,10 @@ pub struct Player {
     analysis_cache: HashMap<AnalysisCacheKey, VisualizerAnalysis>,
     analysis_cache_order: VecDeque<AnalysisCacheKey>,
     analysis_pending: HashSet<AnalysisCacheKey>,
-    analysis_tx: Sender<(AnalysisCacheKey, VisualizerAnalysis)>,
-    analysis_rx: Receiver<(AnalysisCacheKey, VisualizerAnalysis)>,
+    analysis_queue: VecDeque<(PathBuf, AnalysisCacheKey)>,
+    analysis_active_jobs: usize,
+    analysis_tx: Sender<(AnalysisCacheKey, Option<VisualizerAnalysis>)>,
+    analysis_rx: Receiver<(AnalysisCacheKey, Option<VisualizerAnalysis>)>,
     current_analysis_key: Option<AnalysisCacheKey>,
 }
 
@@ -74,6 +78,8 @@ impl Player {
             analysis_cache: HashMap::new(),
             analysis_cache_order: VecDeque::new(),
             analysis_pending: HashSet::new(),
+            analysis_queue: VecDeque::new(),
+            analysis_active_jobs: 0,
             analysis_tx,
             analysis_rx,
             current_analysis_key: None,
