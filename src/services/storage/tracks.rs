@@ -152,3 +152,102 @@ impl Storage {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_db_path() -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        std::env::temp_dir().join(format!("melors-storage-test-{nanos}.sqlite"))
+    }
+
+    fn cleanup_db(path: &PathBuf) {
+        let _ = fs::remove_file(path);
+        let _ = fs::remove_file(format!("{}-wal", path.to_string_lossy()));
+        let _ = fs::remove_file(format!("{}-shm", path.to_string_lossy()));
+    }
+
+    #[test]
+    fn upsert_preserves_album_when_album_override_enabled() {
+        let db_path = temp_db_path();
+        let mut storage = Storage::open(&db_path).expect("open storage");
+        let track_path = PathBuf::from("/tmp/track-preserve.mp3");
+
+        storage
+            .upsert_tracks(&[TrackInput {
+                path: track_path.clone(),
+                mtime: 100,
+                title: "Song".to_string(),
+                artist: Some("Artist".to_string()),
+                album: Some("Album A".to_string()),
+                duration_secs: Some(180),
+            }])
+            .expect("initial upsert");
+
+        let track_id = storage.load_tracks().expect("load tracks")[0].id;
+        storage
+            .rename_album(track_id, "Manual Album")
+            .expect("rename album");
+
+        storage
+            .upsert_tracks(&[TrackInput {
+                path: track_path,
+                mtime: 100,
+                title: "Song".to_string(),
+                artist: Some("Artist".to_string()),
+                album: Some("Scanned Album".to_string()),
+                duration_secs: Some(180),
+            }])
+            .expect("second upsert");
+
+        let tracks = storage.load_tracks().expect("load tracks after upsert");
+        assert_eq!(tracks.len(), 1);
+        assert_eq!(tracks[0].album.as_deref(), Some("Manual Album"));
+
+        drop(storage);
+        cleanup_db(&db_path);
+    }
+
+    #[test]
+    fn upsert_updates_album_when_album_override_disabled() {
+        let db_path = temp_db_path();
+        let mut storage = Storage::open(&db_path).expect("open storage");
+        let track_path = PathBuf::from("/tmp/track-update.mp3");
+
+        storage
+            .upsert_tracks(&[TrackInput {
+                path: track_path.clone(),
+                mtime: 100,
+                title: "Song".to_string(),
+                artist: Some("Artist".to_string()),
+                album: Some("Album A".to_string()),
+                duration_secs: Some(180),
+            }])
+            .expect("initial upsert");
+
+        storage
+            .upsert_tracks(&[TrackInput {
+                path: track_path,
+                mtime: 101,
+                title: "Song".to_string(),
+                artist: Some("Artist".to_string()),
+                album: Some("Album B".to_string()),
+                duration_secs: Some(180),
+            }])
+            .expect("second upsert");
+
+        let tracks = storage.load_tracks().expect("load tracks after upsert");
+        assert_eq!(tracks.len(), 1);
+        assert_eq!(tracks[0].album.as_deref(), Some("Album B"));
+
+        drop(storage);
+        cleanup_db(&db_path);
+    }
+}
