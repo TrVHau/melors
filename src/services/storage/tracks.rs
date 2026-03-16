@@ -1,4 +1,6 @@
 use super::*;
+use rusqlite::params_from_iter;
+use rusqlite::types::Value;
 
 impl Storage {
     pub fn upsert_tracks(&mut self, inputs: &[TrackInput]) -> Result<()> {
@@ -110,6 +112,47 @@ impl Storage {
             tracks.push(row?);
         }
         Ok(tracks)
+    }
+
+    #[allow(dead_code)]
+    pub fn search_track_ids_with_filters(
+        &self,
+        artist: Option<&str>,
+        album: Option<&str>,
+        favorite: Option<bool>,
+    ) -> Result<Vec<i64>> {
+        let mut sql = String::from("SELECT id FROM tracks WHERE 1=1");
+        let mut params = Vec::<Value>::new();
+
+        if let Some(artist) = artist
+            && !artist.trim().is_empty()
+        {
+            sql.push_str(" AND COALESCE(artist, '') LIKE ? COLLATE NOCASE");
+            params.push(Value::from(format!("%{}%", artist.trim())));
+        }
+
+        if let Some(album) = album
+            && !album.trim().is_empty()
+        {
+            sql.push_str(" AND COALESCE(album, '') LIKE ? COLLATE NOCASE");
+            params.push(Value::from(format!("%{}%", album.trim())));
+        }
+
+        if let Some(favorite) = favorite {
+            sql.push_str(" AND favorite = ?");
+            params.push(Value::from(i64::from(favorite)));
+        }
+
+        sql.push_str(" ORDER BY artist COLLATE NOCASE ASC, album COLLATE NOCASE ASC, title COLLATE NOCASE ASC");
+
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = stmt.query_map(params_from_iter(params), |row| row.get::<_, i64>(0))?;
+
+        let mut out = Vec::new();
+        for row in rows {
+            out.push(row?);
+        }
+        Ok(out)
     }
 
     pub fn increment_play_count(&self, track_id: i64) -> Result<()> {
@@ -246,6 +289,51 @@ mod tests {
         let tracks = storage.load_tracks().expect("load tracks after upsert");
         assert_eq!(tracks.len(), 1);
         assert_eq!(tracks[0].album.as_deref(), Some("Album B"));
+
+        drop(storage);
+        cleanup_db(&db_path);
+    }
+
+    #[test]
+    fn search_track_ids_with_filters_supports_case_insensitive_partial_and_favorite() {
+        let db_path = temp_db_path();
+        let mut storage = Storage::open(&db_path).expect("open storage");
+
+        storage
+            .upsert_tracks(&[
+                TrackInput {
+                    path: PathBuf::from("/tmp/s1.mp3"),
+                    mtime: 1,
+                    title: "Song 1".to_string(),
+                    artist: Some("Radiohead".to_string()),
+                    album: Some("Kid A".to_string()),
+                    duration_secs: Some(100),
+                },
+                TrackInput {
+                    path: PathBuf::from("/tmp/s2.mp3"),
+                    mtime: 1,
+                    title: "Song 2".to_string(),
+                    artist: Some("Massive Attack".to_string()),
+                    album: Some("Mezzanine".to_string()),
+                    duration_secs: Some(120),
+                },
+            ])
+            .expect("seed tracks");
+
+        let tracks = storage.load_tracks().expect("load tracks");
+        let radiohead_id = tracks
+            .iter()
+            .find(|t| t.artist.as_deref() == Some("Radiohead"))
+            .expect("radiohead track")
+            .id;
+        storage
+            .toggle_favorite(radiohead_id)
+            .expect("favorite track");
+
+        let ids = storage
+            .search_track_ids_with_filters(Some("radio"), Some("kid"), Some(true))
+            .expect("search ids");
+        assert_eq!(ids, vec![radiohead_id]);
 
         drop(storage);
         cleanup_db(&db_path);

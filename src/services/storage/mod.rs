@@ -7,6 +7,7 @@ use crate::core::model::{PlaybackState, RepeatMode, Track, TrackInput};
 
 mod migrations;
 mod playback;
+mod playlists;
 mod queue;
 mod tracks;
 
