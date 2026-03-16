@@ -18,12 +18,16 @@ impl UiState {
         let is_active = matches!(self.focus, FocusPanel::Library)
             || matches!(
                 self.mode,
-                InputMode::Search | InputMode::Rename | InputMode::EditTag
+                InputMode::Search
+                    | InputMode::Rename
+                    | InputMode::EditTag
+                    | InputMode::PlaylistModal
             );
         let mode_suffix = match self.mode {
             InputMode::Search => " [/] ",
             InputMode::Rename => " [rename] ",
             InputMode::EditTag => " [edit tag] ",
+            InputMode::PlaylistModal => " [playlist] ",
             InputMode::Normal => " ",
         };
 

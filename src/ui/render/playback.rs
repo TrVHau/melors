@@ -153,6 +153,9 @@ impl UiState {
                 let value = &self.edit_tag_inputs[self.edit_tag_field];
                 format!(" Edit Tag [{}] -> {}_ ", field_name, value)
             }
+            InputMode::PlaylistModal => {
+                format!(" {} ", self.status)
+            }
             InputMode::Normal => format!(" {} ", self.status),
         };
         let text = if self.mode == InputMode::Normal {
@@ -160,9 +163,22 @@ impl UiState {
                 FocusPanel::Queue => {
                     "[Tab] panel  [Shift+Up/Down] reorder  [x] remove  [Enter] play"
                 }
-                _ => "[Tab] panel  [s] search  [a] queue  [t] edit tags  [Enter] play",
+                _ => {
+                    "[Tab] panel  [s] search  [l] playlists  [a] queue  [t] edit tags  [Enter] play"
+                }
             };
             format!(" {}  |  {}  |  [Alt+T] theme ", self.status, hint)
+        } else if self.mode == InputMode::Search {
+            if let Some(warning) = &self.search_warning {
+                format!(" /{}_  |  warning: {} ", self.search_input, warning)
+            } else {
+                text
+            }
+        } else if self.mode == InputMode::PlaylistModal {
+            format!(
+                " {}  |  [Esc/l] close  [Enter] open/play  [c/R/d] manage playlist  [a/x] item ops ",
+                self.status
+            )
         } else {
             text
         };

@@ -65,6 +65,10 @@ impl UiState {
                 self.enter_search_mode();
                 self.status = String::from("Search mode");
             }
+            KeyCode::Char('l') => {
+                self.enter_playlist_modal();
+                self.status = String::from("Playlist modal");
+            }
             KeyCode::Char('r') => {
                 if app.begin_scan() {
                     self.status = String::from("Rescan started...");
