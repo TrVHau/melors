@@ -100,18 +100,21 @@ The app runs on a mostly **single-threaded** event loop.
 
 ### `tracks`
 
-| Column           | Type    | Notes                                     |
-| ---------------- | ------- | ----------------------------------------- |
-| `id`             | INTEGER | primary key                               |
-| `path`           | TEXT    | unique; absolute path to file             |
-| `mtime`          | INTEGER | Unix timestamp; used for incremental scan |
-| `title`          | TEXT    |                                           |
-| `artist`         | TEXT    | nullable                                  |
-| `album`          | TEXT    | nullable                                  |
-| `duration_secs`  | INTEGER | nullable                                  |
-| `favorite`       | INTEGER | 0 / 1                                     |
-| `play_count`     | INTEGER | default 0                                 |
-| `last_played_at` | TEXT    | nullable ISO timestamp                    |
+| Column            | Type    | Notes                                     |
+| ----------------- | ------- | ----------------------------------------- |
+| `id`              | INTEGER | primary key                               |
+| `path`            | TEXT    | unique; absolute path to file             |
+| `mtime`           | INTEGER | Unix timestamp; used for incremental scan |
+| `title`           | TEXT    |                                           |
+| `artist`          | TEXT    | nullable                                  |
+| `album`           | TEXT    | nullable                                  |
+| `duration`        | INTEGER | nullable                                  |
+| `title_override`  | INTEGER | 0 / 1                                     |
+| `artist_override` | INTEGER | 0 / 1                                     |
+| `album_override`  | INTEGER | 0 / 1                                     |
+| `favorite`        | INTEGER | 0 / 1                                     |
+| `play_count`      | INTEGER | default 0                                 |
+| `last_played_at`  | TEXT    | nullable ISO timestamp                    |
 
 ### `queue_state`
 
@@ -122,13 +125,13 @@ The app runs on a mostly **single-threaded** event loop.
 
 ### `playback_state`
 
-| Column             | Type    | Notes           |
-| ------------------ | ------- | --------------- |
-| `current_track_id` | INTEGER | nullable FK     |
-| `position_secs`    | INTEGER |                 |
-| `shuffle_enabled`  | INTEGER | 0 / 1           |
-| `repeat_mode`      | TEXT    | off / one / all |
-| `updated_at`       | TEXT    | ISO timestamp   |
+| Column             | Type    | Notes                          |
+| ------------------ | ------- | ------------------------------ |
+| `current_track_id` | INTEGER | nullable FK                    |
+| `position_secs`    | INTEGER |                                |
+| `shuffle_enabled`  | INTEGER | 0 / 1                          |
+| `repeat_mode`      | INTEGER | 0=Off, 1=RepeatOne, 2=RepeatAll |
+| `updated_at`       | TEXT    | ISO timestamp                  |
 
 ## Caching Strategy
 
