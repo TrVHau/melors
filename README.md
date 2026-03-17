@@ -67,9 +67,8 @@ music_dir = "/home/you/Music/melors"
 ### App and Navigation
 
 - `q`: quit
-- `Tab`: cycle panel focus (`Library <-> Queue`)
 - `Up` / `Down`: move selection
-- `Enter`: play selected track/queue item
+- `Enter`: play selected track
 
 ### Playback
 
@@ -80,15 +79,12 @@ music_dir = "/home/you/Music/melors"
 - `Shift+Left` / `Shift+Right`: seek -10s / +10s
 - `[` / `]`: volume down/up
 
-### Library and Queue
+### Library
 
 - `s`: search mode
 - `r`: rescan music directory
 - `f`: toggle favorite on selected track
 - `a`: add selected (or currently playing) track to current playlist
-- `Shift+A`: add selected track to queue
-- `x`: remove selected queue item
-- `Shift+Up` / `Shift+Down` (in Queue): reorder queue item
 
 ### Metadata Editing
 
@@ -105,14 +101,12 @@ Tag editor:
 1. Press `l` to open playlist modal.
    Playlist appears inline in the right pane (replacing Queue), not as popup.
    On narrow terminals, playlist view auto-switches to stacked mode for better readability.
-2. Use `Up/Down` to choose playlist or item (depending on active pane).
-3. Press `Tab` (or `Left/Right`) to switch between Playlist pane and Items pane.
-4. Press `c` or `n` to create playlist, type name, then `Enter` to save.
-5. Press `r` (or `R`) to rename selected playlist.
-6. Press `a` to add selected Library track. If none is selected, melors falls back to currently playing track, then selected queue track.
-7. If there is no playlist yet, pressing `a` auto-creates `Playlist 1` and adds the track.
-8. Press `Enter` in playlist pane to open items, and `Enter` in items pane to play.
-9. Press `x` to remove item, `Shift+Up/Down` to reorder item.
+2. Use `Up/Down` to choose playlist or item.
+3. Press `Enter` on a playlist to open it; press `Enter` on `+ New playlist` to create a new one.
+4. Press `a` to add selected Library track. If none is selected, melors falls back to the currently playing track.
+5. Press `Esc` in items view to go back to playlists; press `Esc` again to close.
+6. Press `Enter` in items view to play.
+7. Once a playlist is opened for playback, it becomes the current `Up Next` list in the main UI.
 
 ### Playback Modes and Visualizer
 

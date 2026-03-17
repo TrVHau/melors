@@ -1,138 +1,78 @@
-# UX and Keymap
+# UX Keymap (Single Source of Truth)
 
-## Panel Layout
+This file documents the keymap currently implemented in `src/ui/input/*`.
 
-```
-┌───────────────────────────────────────────┐ ┌─────────────────────┐
-│ Library [Normal / Search / Rename]      │ │ Queue                 │
-│ (track list, scrollable)                │ │ (playback queue)      │
-├───────────────────────────────────────────┤ ├─────────────────────┤
-│ Now Playing                             │ │ Visualizer            │
-│ (track, album, volume, status)          │ │ [Cava / Clock / CMatrix] │
-├───────────────────────────────────────────┤ │                       │
-│ Progress (or search / rename input)     │ │                       │
-└───────────────────────────────────────────┘ └─────────────────────┘
-```
+## Modes
 
-The progress bar row doubles as an input area: it shows the search query during
-Search mode and the rename input during Rename mode.
+- `Normal`: default browsing and playback control.
+- `Search`: query input and filtered library navigation.
+- `EditTag`: edit title/artist/album for the selected track.
+- `PlaylistModal`: manage playlists and playlist items.
 
-## Input Modes
+## Global (`all modes`)
 
-| Mode      | Trigger              | Description                                          |
-| --------- | -------------------- | ---------------------------------------------------- |
-| `Normal`  | default / `Esc`      | Browse and control playback                          |
-| `Search`  | `s`                  | Type a query; library filters in real time           |
-| `Rename`  | `m` / `M` on a track | Edit selected track title/file (`m`) or artist (`M`) |
-| `EditTag` | `t` on a track       | Edit ID3 fields (title, artist, album) and save back |
+- `Alt+0`: visualizer off (low-power)
+- `Alt+1`: visualizer demo bars
+- `Alt+2`: visualizer clock
+- `Alt+3`: visualizer cmatrix
+- `Alt+T`: cycle theme
 
-## Keybindings
+## Normal Mode
 
-### Global (all modes)
+### Navigation
 
-| Key     | Action                      |
-| ------- | --------------------------- |
-| `Alt+1` | Visualizer: Spectrum (Cava) |
-| `Alt+2` | Visualizer: Clock           |
-| `Alt+3` | Visualizer: CMatrix rain    |
+- `q`: quit
+- `Up` / `Down`: selection up/down
+- `Enter`: play selected track
 
-### Normal mode
+### Playback
 
-#### Navigation
+- `Space`: toggle play/pause
+- `n`: next track
+- `p`: previous track
+- `Left` / `Right`: seek -5s / +5s
+- `Shift+Left` / `Shift+Right`: seek -10s / +10s
+- `[ / ]`: volume down/up
+- `e`: cycle repeat mode
+- `u`: toggle shuffle
 
-| Key       | Action                           |
-| --------- | -------------------------------- |
-| `↑` / `↓` | Move selection up / down         |
-| `Tab`     | Focus next panel (cycles)        |
-| `Enter`   | Play selected track / queue item |
-| `q`       | Quit                             |
+### Library Actions
 
-#### Playback
+- `s`: enter search mode
+- `l`: open playlist modal
+- `r`: rescan library
+- `f`: toggle favorite
+- `a`: quick add selected/current track into playlist
+- `t` or `T`: enter tag editor
 
-| Key                   | Action            |
-| --------------------- | ----------------- |
-| `Space`               | Play / pause      |
-| `n`                   | Next track        |
-| `p`                   | Previous track    |
-| `←` / `→`             | Seek −5s / +5s    |
-| `Shift+←` / `Shift+→` | Seek −10s / +10s  |
-| `[` / `]`             | Volume down / up  |
-| `e`                   | Cycle repeat mode |
-| `u`                   | Toggle shuffle    |
+## Search Mode
 
-#### Library actions
+- `Esc`: back to normal mode
+- `Enter`: play selected search result and exit search mode
+- `Backspace`: remove last query character
+- `Up` / `Down`: move in filtered results
+- any printable char: append to query
 
-| Key | Action                                |
-| --- | ------------------------------------- |
-| `s` | Enter Search mode                     |
-| `f` | Toggle favorite on selected track     |
-| `a` | Add selected track to queue           |
-| `x` | Remove selected item from queue       |
-| `m` | Enter Rename mode on selected track   |
-| `M` | Enter Rename mode for selected artist |
-| `t` | Enter tag edit mode                   |
-| `r` | Rescan library from disk              |
+## EditTag Mode
 
-#### Queue actions
+- `Esc`: cancel
+- `Tab` / `BackTab`: next field (Title -> Artist -> Album)
+- `Enter`: save
+- `Backspace`: delete character
+- any printable char: append to active field
 
-| Key       | Action                        |
-| --------- | ----------------------------- |
-| `Shift+↑` | Move selected queue item up   |
-| `Shift+↓` | Move selected queue item down |
+## Playlist Modal
 
-#### Theme and visualizer
+Only four controls are used inside playlist mode:
 
-| Key     | Action                |
-| ------- | --------------------- |
-| `Alt+1` | Visualizer: Cava      |
-| `Alt+2` | Visualizer: Clock     |
-| `Alt+3` | Visualizer: CMatrix   |
-| `Alt+T` | Cycle UI theme preset |
+- `Up` / `Down`: move selection
+- `Enter`: open selected playlist, play selected item, or create a new playlist from the `+ New playlist` row
+- `a`: add selected/current track into the selected playlist; if `+ New playlist` is selected, melors creates one automatically first
+- `Esc`: go back from items to playlists, or close the playlist modal from playlist list
 
-### Search mode
+## Notes
 
-| Key         | Action                                    |
-| ----------- | ----------------------------------------- |
-| Any char    | Append to query; library filters live     |
-| `Backspace` | Delete last character                     |
-| `↑` / `↓`   | Navigate filtered results                 |
-| `Enter`     | Play selected result; exit Search mode    |
-| `Esc`       | Cancel; restore full library; clear query |
-
-### Rename mode
-
-| Key         | Action                                                        |
-| ----------- | ------------------------------------------------------------- |
-| Any char    | Append to rename input                                        |
-| `Backspace` | Delete last character                                         |
-| `Enter`     | Confirm: apply title/file rename (`m`) or artist rename (`M`) |
-| `Esc`       | Cancel; no changes made                                       |
-
-### EditTag mode
-
-| Key         | Action                                        |
-| ----------- | --------------------------------------------- |
-| Any char    | Edit current field                            |
-| `Backspace` | Delete last character in current field        |
-| `Tab`       | Move to next field (Title -> Artist -> Album) |
-| `Enter`     | Save all fields to file tags and database     |
-| `Esc`       | Cancel; no changes made                       |
-
-## Interaction Principles
-
-- All actions available without a mouse.
-- Navigation state is preserved when switching panels.
-- Search clears on both confirmation (`Enter`) and cancellation (`Esc`).
-- `m` rename operates on the file on disk and updates the database atomically;
-  if `std::fs::rename` fails the database is not touched.
-- `M` rename updates only the artist field in the database.
-- Status line (bottom of Now Playing) reflects the last action for quick feedback.
-
-## Session Resume
-
-On every launch the following state is restored from the database:
-
-- Current track and playback position
-- Queue contents and order
-- Shuffle on/off
-- Repeat mode (off / one / all)
+- The old rename mode (`m`, `M`) is no longer active; metadata editing is done via `t`/`T` only.
+- Playlist naming is automatic (`Playlist 1`, `Playlist 2`, ...).
+- Opening or playing a playlist makes that playlist become the current `Up Next` source.
+- Status and header text are intentionally minimal; the UI no longer repeats full key hints on every screen.

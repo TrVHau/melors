@@ -38,26 +38,6 @@ impl UiState {
         &self.library_cached_render_rows
     }
 
-    pub fn queue_track_ids(&mut self, app: &App) -> &[i64] {
-        self.refresh_queue_cache(app);
-        &self.queue_cached_track_ids
-    }
-
-    pub fn queue_rows_for_width(&mut self, app: &App, width: usize) -> &[String] {
-        self.refresh_queue_cache(app);
-        if self.queue_render_width != width
-            || self.queue_cached_render_rows.len() != self.queue_cached_rows.len()
-        {
-            self.queue_cached_render_rows = self
-                .queue_cached_rows
-                .iter()
-                .map(|row| Self::fixed_width_cell(row, width))
-                .collect();
-            self.queue_render_width = width;
-        }
-        &self.queue_cached_render_rows
-    }
-
     pub(super) fn refresh_library_cache(&mut self, app: &App) {
         let tracks_version = app.tracks_version();
         let current_track_id = app.playback_state().current_track_id;
@@ -139,49 +119,6 @@ impl UiState {
         self.library_render_width = 0;
         self.library_cached_render_rows.clear();
     }
-
-    pub(super) fn refresh_queue_cache(&mut self, app: &App) {
-        let queue_version = app.queue_version();
-        let tracks_version = app.tracks_version();
-        let current_track_id = app.playback_state().current_track_id;
-        if self.queue_cache_version == queue_version
-            && self.queue_cache_tracks_version == tracks_version
-            && self.queue_cache_current_track_id == current_track_id
-        {
-            return;
-        }
-
-        self.queue_cached_track_ids.clear();
-        self.queue_cached_rows.clear();
-
-        let queue_ids = app.queue_ids();
-        self.queue_cached_track_ids.reserve(queue_ids.len());
-        self.queue_cached_rows.reserve(queue_ids.len());
-        for (idx, track_id) in queue_ids.iter().copied().enumerate() {
-            if let Some(track) = app.track_by_id(track_id) {
-                self.queue_cached_track_ids.push(track.id);
-                let marker = if Some(track.id) == current_track_id {
-                    ">"
-                } else {
-                    " "
-                };
-                self.queue_cached_rows.push(format!(
-                    "{} {:02}. {} - {}",
-                    marker,
-                    idx + 1,
-                    track.artist.as_deref().unwrap_or("Unknown Artist"),
-                    track.title
-                ));
-            }
-        }
-
-        self.queue_cache_version = queue_version;
-        self.queue_cache_tracks_version = tracks_version;
-        self.queue_cache_current_track_id = current_track_id;
-        self.queue_render_width = 0;
-        self.queue_cached_render_rows.clear();
-    }
-
     pub fn cached_track_seed(&mut self, app: &App) -> u64 {
         let current_track_id = app.playback_state().current_track_id;
         let tracks_version = app.tracks_version();

@@ -45,7 +45,7 @@ impl UiState {
             || tick_ms.saturating_sub(self.visualizer_last_update_ms) >= 33
         {
             // Keep tick in a small range to avoid f32 precision loss from epoch-sized values.
-            let tick = ((self.visualizer_tick() as u64 % 600_000) as f32) / 1000.0;
+            let tick = ((tick_ms as u64 % 600_000) as f32) / 1000.0;
             let seed = (self.cached_track_seed(app) % 997) as f32 / 997.0;
             let fresh: Vec<(f32, f32)> = (0..bars)
                 .map(|idx| {

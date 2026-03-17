@@ -16,32 +16,14 @@ impl UiState {
     }
 
     fn quick_add_selected_track_to_playlist(&mut self, app: &mut App) -> Result<()> {
-        let track_id = self
-            .selected_track_id(app)
-            .or(app.playback_state().current_track_id);
+        let track_id = self.resolve_track_for_playlist_add(app);
         let Some(track_id) = track_id else {
             self.status = String::from("No track selected to add");
             return Ok(());
         };
 
-        let playlists = app.list_playlists_action()?;
-        let playlist_id = if playlists.is_empty() {
-            let created = app.create_playlist_action("Playlist 1").status_message();
-            if created.code != "playlist.created" {
-                self.status = created.text;
-                return Ok(());
-            }
-            let playlists = app.list_playlists_action()?;
-            if playlists.is_empty() {
-                self.status = String::from("Failed to create default playlist");
-                return Ok(());
-            }
-            self.playlist_selected = 0;
-            playlists[0].id
-        } else {
-            let idx = self.playlist_selected.min(playlists.len() - 1);
-            self.playlist_selected = idx;
-            playlists[idx].id
+        let Some(playlist_id) = self.ensure_playlist_for_add(app)? else {
+            return Ok(());
         };
 
         let msg = app
@@ -51,43 +33,12 @@ impl UiState {
         Ok(())
     }
 
-    fn quick_add_selected_track_to_queue(&mut self, app: &mut App) -> Result<()> {
-        if let Some(track_id) = self.selected_track_id(app)
-            && app.add_to_queue(track_id)?
-        {
-            self.status = format!("Queued #{}", track_id);
-        } else {
-            self.status = String::from("No track selected to queue");
-        }
-        Ok(())
-    }
-
     pub(super) fn handle_normal_key(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
         match key.code {
             KeyCode::Char('q') => return Ok(true),
-            KeyCode::BackTab | KeyCode::Tab => self.focus_right(),
-            KeyCode::Up if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                if matches!(self.focus, FocusPanel::Queue)
-                    && let Some(next) = app.move_queue_index(self.queue_selected, -1)?
-                {
-                    self.queue_selected = next;
-                    self.status = format!("Moved queue item to #{}", next + 1);
-                }
-            }
-            KeyCode::Down if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                if matches!(self.focus, FocusPanel::Queue)
-                    && let Some(next) = app.move_queue_index(self.queue_selected, 1)?
-                {
-                    self.queue_selected = next;
-                    self.status = format!("Moved queue item to #{}", next + 1);
-                }
-            }
             KeyCode::Down => self.move_selection(app, 1),
             KeyCode::Up => self.move_selection(app, -1),
-            KeyCode::Enter => match self.focus {
-                FocusPanel::Queue => self.play_selected_queue(app)?,
-                _ => self.play_selected(app)?,
-            },
+            KeyCode::Enter => self.play_selected(app)?,
             KeyCode::Char(' ') => {
                 let paused = app.toggle_play_pause()?;
                 self.status = if paused {
@@ -146,9 +97,6 @@ impl UiState {
             KeyCode::Char('a') => {
                 self.quick_add_selected_track_to_playlist(app)?;
             }
-            KeyCode::Char('A') => {
-                self.quick_add_selected_track_to_queue(app)?;
-            }
             KeyCode::Char('e') => {
                 let mode = app.toggle_repeat()?;
                 self.status = format!("Repeat: {mode}");
@@ -168,15 +116,6 @@ impl UiState {
             KeyCode::Char('[') => {
                 let volume = app.adjust_volume(-0.05);
                 self.status = format!("Volume: {volume}%");
-            }
-            KeyCode::Char('x') => {
-                if matches!(self.focus, FocusPanel::Queue)
-                    && let Some(track_id) = app.remove_queue_index(self.queue_selected)?
-                {
-                    self.status = format!("Removed from queue #{}", track_id);
-                    let queue_len = app.queue_len();
-                    self.queue_selected = self.queue_selected.min(queue_len.saturating_sub(1));
-                }
             }
             KeyCode::Char('t') | KeyCode::Char('T') => {
                 self.enter_unified_tag_mode_for_selected_track(app);

@@ -12,11 +12,7 @@ impl UiState {
                     track.title
                 )),
                 Line::from(format!(
-                    "Album: {}",
-                    track.album.as_deref().unwrap_or("Unknown Album"),
-                )),
-                Line::from(format!(
-                    "Mode: Repeat={} Shuffle={}",
+                    "Repeat={} Shuffle={}",
                     app.playback_state().repeat_mode,
                     if app.playback_state().shuffle_enabled {
                         "On"
@@ -25,17 +21,15 @@ impl UiState {
                     }
                 )),
                 Line::from(format!(
-                    "Queue: {} tracks | Volume: {}%",
-                    app.queue_len(),
+                    "Vol {}%",
                     app.volume_percent()
                 )),
             ]
         } else {
             vec![
                 Line::from("Track: (none)"),
-                Line::from("Album: (none)"),
                 Line::from(format!(
-                    "Mode: Repeat={} Shuffle={}",
+                    "Repeat={} Shuffle={}",
                     app.playback_state().repeat_mode,
                     if app.playback_state().shuffle_enabled {
                         "On"
@@ -44,11 +38,7 @@ impl UiState {
                     }
                 )),
                 Line::from(self.next_up_line(app)),
-                Line::from(format!(
-                    "Queue: {} tracks | Volume: {}%",
-                    app.queue_len(),
-                    app.volume_percent()
-                )),
+                Line::from(format!("Vol {}%", app.volume_percent())),
             ]
         };
 
@@ -188,22 +178,11 @@ impl UiState {
             InputMode::Normal => format!(" {} ", self.status),
         };
         let text = if self.mode == InputMode::Normal {
-            let hint = match self.focus {
-                FocusPanel::Queue => "Tab panel | Enter play | x remove",
-                _ => "s search | l playlists | a add-playlist | A queue | t edit | Enter play",
-            };
-            format!(" {} | {} | Alt+T theme ", self.status, hint)
+            format!(" {} ", self.status)
         } else if self.mode == InputMode::Search {
-            if let Some(warning) = &self.search_warning {
-                format!(" /{}_ | warning: {} ", self.search_input, warning)
-            } else {
-                text
-            }
+            format!(" /{}_ ", self.search_input)
         } else if self.mode == InputMode::PlaylistModal {
-            format!(
-                " {} | Esc close | Tab pane | Enter play | c new | r rename | d del | a add | x rm ",
-                self.status
-            )
+            format!(" {} ", self.status)
         } else {
             text
         };

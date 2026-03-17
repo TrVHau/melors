@@ -3,7 +3,6 @@ use super::*;
 #[derive(Debug, Clone, Copy)]
 pub enum FocusPanel {
     Library,
-    Queue,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -18,8 +17,6 @@ pub enum InputMode {
 pub enum PlaylistModalMode {
     BrowsePlaylists,
     BrowseItems,
-    CreatePlaylistName,
-    RenamePlaylistName,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -83,12 +80,10 @@ pub struct UiState {
     pub edit_tag_inputs: [String; 3],
     pub edit_tag_field: usize,
     pub library_selected: usize,
-    pub queue_selected: usize,
     pub status: String,
     pub search_warning: Option<String>,
     pub playlist_modal_visible: bool,
     pub playlist_modal_mode: PlaylistModalMode,
-    pub playlist_name_input: String,
     pub playlist_selected: usize,
     pub playlist_item_selected: usize,
     pub playlist_action_latency_samples: u64,
@@ -106,13 +101,6 @@ pub struct UiState {
     pub(super) seed_cached_track_id: Option<i64>,
     pub(super) seed_cached_tracks_version: u64,
     pub(super) seed_cached_value: u64,
-    pub(super) queue_cache_tracks_version: u64,
-    pub(super) queue_cache_version: u64,
-    pub(super) queue_cache_current_track_id: Option<i64>,
-    pub(super) queue_cached_track_ids: Vec<i64>,
-    pub(super) queue_cached_rows: Vec<String>,
-    pub(super) queue_render_width: usize,
-    pub(super) queue_cached_render_rows: Vec<String>,
 }
 
 impl UiState {
@@ -130,12 +118,10 @@ impl UiState {
             edit_tag_inputs: [String::new(), String::new(), String::new()],
             edit_tag_field: 0,
             library_selected: 0,
-            queue_selected: 0,
             status: String::from("Ready"),
             search_warning: None,
             playlist_modal_visible: false,
             playlist_modal_mode: PlaylistModalMode::BrowsePlaylists,
-            playlist_name_input: String::new(),
             playlist_selected: 0,
             playlist_item_selected: 0,
             playlist_action_latency_samples: 0,
@@ -153,13 +139,6 @@ impl UiState {
             seed_cached_track_id: None,
             seed_cached_tracks_version: 0,
             seed_cached_value: 0,
-            queue_cache_tracks_version: 0,
-            queue_cache_version: 0,
-            queue_cache_current_track_id: None,
-            queue_cached_track_ids: Vec::new(),
-            queue_cached_rows: Vec::new(),
-            queue_render_width: 0,
-            queue_cached_render_rows: Vec::new(),
         }
     }
 }

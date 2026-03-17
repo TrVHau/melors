@@ -3,7 +3,7 @@ mod render;
 mod state;
 
 use std::io;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use crossterm::event::{self, Event};
@@ -39,27 +39,43 @@ pub fn run(app: &mut App) -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let mut ui = UiState::new();
+    let mut needs_redraw = true;
+    let mut last_draw_at = Instant::now();
 
     let run_result = (|| -> Result<()> {
         loop {
-            app.refresh_playback_position()?;
             if let Some(status) = app.poll_scan_status() {
                 ui.status = status;
+                needs_redraw = true;
             }
-            terminal.draw(|frame| ui.draw(frame, app))?;
 
-            let poll_ms = match ui.visualizer_mode {
-                VisualizerMode::Off => 1500,
-                VisualizerMode::Cava => 33,
-                VisualizerMode::CMatrix => 66,
-                VisualizerMode::Clock => 1000,
+            let frame_interval = match ui.visualizer_mode {
+                VisualizerMode::Off => Duration::from_millis(1000),
+                VisualizerMode::Cava => Duration::from_millis(33),
+                VisualizerMode::CMatrix => Duration::from_millis(66),
+                VisualizerMode::Clock => Duration::from_millis(1000),
+            };
+            let frame_interval = if ui.mode == self::state::InputMode::PlaylistModal {
+                frame_interval.max(Duration::from_millis(120))
+            } else {
+                frame_interval
             };
 
-            if event::poll(Duration::from_millis(poll_ms))?
-                && let Event::Key(key) = event::read()?
-                && ui.handle_key(app, key)?
-            {
-                return Ok(());
+            if needs_redraw || last_draw_at.elapsed() >= frame_interval {
+                app.refresh_playback_position()?;
+                terminal.draw(|frame| ui.draw(frame, app))?;
+                last_draw_at = Instant::now();
+                needs_redraw = false;
+            }
+
+            let time_until_frame = frame_interval.saturating_sub(last_draw_at.elapsed());
+            let poll_timeout = time_until_frame.min(Duration::from_millis(40));
+
+            if event::poll(poll_timeout)? && let Event::Key(key) = event::read()? {
+                if ui.handle_key(app, key)? {
+                    return Ok(());
+                }
+                needs_redraw = true;
             }
         }
     })();

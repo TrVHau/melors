@@ -42,7 +42,7 @@ impl UiState {
         if self.mode == InputMode::PlaylistModal {
             self.draw_playlist_modal(f, rows[1], app);
         } else {
-            self.draw_queue(f, rows[1], app);
+            self.draw_now_playing(f, rows[1], app);
         }
     }
 
@@ -61,7 +61,7 @@ impl UiState {
         if self.mode == InputMode::PlaylistModal {
             self.draw_playlist_modal(f, top[1], app);
         } else {
-            self.draw_queue(f, top[1], app);
+            self.draw_now_playing(f, top[1], app);
         }
 
         if self.mode == InputMode::PlaylistModal {
@@ -96,12 +96,7 @@ impl UiState {
         if self.mode == InputMode::PlaylistModal {
             self.draw_playlist_modal(f, top[1], app);
         } else {
-            let side = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Percentage(56), Constraint::Percentage(44)])
-                .split(top[1]);
-            self.draw_queue(f, side[0], app);
-            self.draw_now_playing(f, side[1], app);
+            self.draw_now_playing(f, top[1], app);
         }
 
         let bottom = Layout::default()
@@ -139,10 +134,7 @@ impl UiState {
             .unwrap_or_else(|| String::from("no track"));
 
         let text = format!(
-            " melors  [{mode}]  vol:{}%  queue:{}  theme:{}  |  {} ",
-            app.volume_percent(),
-            app.queue_len(),
-            self.theme,
+            " melors [{mode}] | {} ",
             current
         );
         let p = Paragraph::new(text).style(

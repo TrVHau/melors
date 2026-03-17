@@ -22,10 +22,6 @@ pub enum PlaylistActionResult {
         playlist_id: i64,
         name: String,
     },
-    PlaylistRenamed {
-        playlist_id: i64,
-        name: String,
-    },
     PlaylistDeleted {
         playlist_id: i64,
     },
@@ -70,11 +66,6 @@ impl PlaylistActionResult {
                 level: ActionStatusLevel::Info,
                 code: "playlist.created",
                 text: format!("Playlist created: {name}"),
-            },
-            Self::PlaylistRenamed { name, .. } => ActionStatusMessage {
-                level: ActionStatusLevel::Info,
-                code: "playlist.renamed",
-                text: format!("Playlist renamed: {name}"),
             },
             Self::PlaylistDeleted { .. } => ActionStatusMessage {
                 level: ActionStatusLevel::Info,
@@ -125,14 +116,6 @@ impl PlaylistActionResult {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SessionRefreshScope {
-    PlaylistOnly,
-    PlaylistAndQueue,
-    PlaybackRelated,
-    FullReloadFallback,
-}
-
 impl App {
     pub fn create_playlist_action(&self, name: &str) -> PlaylistActionResult {
         match self.storage.create_playlist(name) {
@@ -144,23 +127,14 @@ impl App {
         }
     }
 
-    pub fn rename_playlist_action(&self, playlist_id: i64, name: &str) -> PlaylistActionResult {
-        match self.storage.rename_playlist(playlist_id, name) {
-            Ok(()) => PlaylistActionResult::PlaylistRenamed {
-                playlist_id,
-                name: name.trim().to_string(),
-            },
-            Err(err) => classify_storage_error("rename_playlist", err),
-        }
-    }
-
     pub fn delete_playlist_action(&mut self, playlist_id: i64) -> PlaylistActionResult {
         match self.storage.delete_playlist(playlist_id) {
             Ok(()) => {
-                if let Err(err) =
-                    self.refresh_after_playlist_mutation(SessionRefreshScope::PlaylistOnly)
-                {
-                    return classify_storage_error("delete_playlist", err);
+                if self.session.active_playlist_id == Some(playlist_id) {
+                    self.clear_active_playlist_context();
+                    if let Err(err) = self.rebuild_queue() {
+                        return classify_storage_error("delete_playlist", err);
+                    }
                 }
                 PlaylistActionResult::PlaylistDeleted { playlist_id }
             }
@@ -186,9 +160,7 @@ impl App {
     ) -> PlaylistActionResult {
         match self.storage.add_playlist_item(playlist_id, track_id) {
             Ok(()) => {
-                if let Err(err) =
-                    self.refresh_after_playlist_mutation(SessionRefreshScope::PlaylistAndQueue)
-                {
+                if let Err(err) = self.sync_active_playlist_queue_if_needed(playlist_id) {
                     return classify_storage_error("add_playlist_item", err);
                 }
                 PlaylistActionResult::PlaylistItemAdded {
@@ -207,9 +179,7 @@ impl App {
     ) -> PlaylistActionResult {
         match self.storage.remove_playlist_item(playlist_id, order_index) {
             Ok(()) => {
-                if let Err(err) =
-                    self.refresh_after_playlist_mutation(SessionRefreshScope::PlaylistAndQueue)
-                {
+                if let Err(err) = self.sync_active_playlist_queue_if_needed(playlist_id) {
                     return classify_storage_error("remove_playlist_item", err);
                 }
                 PlaylistActionResult::PlaylistItemRemoved {
@@ -232,9 +202,7 @@ impl App {
             .move_playlist_item(playlist_id, from_index, delta)
         {
             Ok(to_index) => {
-                if let Err(err) =
-                    self.refresh_after_playlist_mutation(SessionRefreshScope::PlaylistAndQueue)
-                {
+                if let Err(err) = self.sync_active_playlist_queue_if_needed(playlist_id) {
                     return classify_storage_error("move_playlist_item", err);
                 }
                 PlaylistActionResult::PlaylistItemMoved {
@@ -266,31 +234,29 @@ impl App {
             return PlaylistActionResult::NoPlayableItem { playlist_id };
         };
 
-        match self.play_track(track_id) {
-            Ok(()) => {
-                if let Err(err) =
-                    self.refresh_after_playlist_mutation(SessionRefreshScope::PlaybackRelated)
-                {
-                    return classify_storage_error("play_from_playlist", err);
+        let playlist_name = self
+            .storage
+            .list_playlists()
+            .ok()
+            .and_then(|playlists| playlists.into_iter().find(|p| p.id == playlist_id))
+            .map(|playlist| playlist.name)
+            .unwrap_or_else(|| format!("Playlist {}", playlist_id));
+
+        match self.activate_playlist_queue(playlist_id, playlist_name) {
+            Ok(track_ids) => {
+                if !track_ids.contains(&track_id) {
+                    return PlaylistActionResult::NoPlayableItem { playlist_id };
                 }
-                PlaylistActionResult::PlaybackStarted {
-                    playlist_id,
-                    track_id,
+
+                match self.play_track(track_id) {
+                    Ok(()) => PlaylistActionResult::PlaybackStarted {
+                        playlist_id,
+                        track_id,
+                    },
+                    Err(err) => classify_storage_error("play_from_playlist", err),
                 }
             }
             Err(err) => classify_storage_error("play_from_playlist", err),
-        }
-    }
-
-    pub(super) fn refresh_after_playlist_mutation(
-        &mut self,
-        scope: SessionRefreshScope,
-    ) -> Result<()> {
-        match scope {
-            SessionRefreshScope::PlaylistOnly
-            | SessionRefreshScope::PlaylistAndQueue
-            | SessionRefreshScope::PlaybackRelated => Ok(()),
-            SessionRefreshScope::FullReloadFallback => self.reload_session_state(),
         }
     }
 }

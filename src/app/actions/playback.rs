@@ -13,32 +13,12 @@ impl App {
 
     pub fn play_track(&mut self, track_id: i64) -> Result<()> {
         self.ensure_track_in_queue(track_id)?;
-
-        if let Some((path, mtime)) = self
-            .track_by_id(track_id)
-            .map(|track| (track.path.clone(), track.mtime))
-        {
-            self.player.play_file(&path, mtime, 0)?;
-            self.session.playback_state.current_track_id = Some(track_id);
-            self.session.playback_state.position_secs = 0;
-            self.storage.increment_play_count(track_id)?;
-            self.persist_playback_state()?;
-        }
+        self.play_track_from_position(track_id, 0, true)?;
         Ok(())
     }
 
     pub fn next_track(&mut self) -> Result<()> {
-        let current_idx = self
-            .session
-            .playback_state
-            .current_track_id
-            .and_then(|id| {
-                self.session
-                    .queue
-                    .iter()
-                    .position(|queue_id| *queue_id == id)
-            })
-            .unwrap_or(usize::MAX);
+        let current_idx = self.current_queue_index().unwrap_or(usize::MAX);
 
         let Some(next_idx) = compute_next_track_index(
             self.session.queue.len(),
@@ -53,17 +33,7 @@ impl App {
     }
 
     pub fn prev_track(&mut self) -> Result<()> {
-        let current_idx = self
-            .session
-            .playback_state
-            .current_track_id
-            .and_then(|id| {
-                self.session
-                    .queue
-                    .iter()
-                    .position(|queue_id| *queue_id == id)
-            })
-            .unwrap_or(0);
+        let current_idx = self.current_queue_index().unwrap_or(0);
 
         let Some(prev_idx) = compute_prev_track_index(self.session.queue.len(), current_idx) else {
             return Ok(());
@@ -87,12 +57,9 @@ impl App {
         }
 
         if let Some(track_id) = self.session.playback_state.current_track_id
-            && let Some((path, mtime)) = self
-                .track_by_id(track_id)
-                .map(|track| (track.path.clone(), track.mtime))
         {
             let start_at = self.session.playback_state.position_secs;
-            self.player.play_file(&path, mtime, start_at)?;
+            self.play_track_from_position(track_id, start_at, false)?;
             return Ok(false);
         }
 
@@ -174,6 +141,36 @@ impl App {
         self.last_persisted_playback_state = Some(self.session.playback_state.clone());
         self.last_persisted_at = Some(std::time::Instant::now());
         self.playback_state_dirty = false;
+        Ok(())
+    }
+
+    fn current_queue_index(&self) -> Option<usize> {
+        self.session
+            .playback_state
+            .current_track_id
+            .and_then(|id| self.session.queue.iter().position(|queue_id| *queue_id == id))
+    }
+
+    fn play_track_from_position(
+        &mut self,
+        track_id: i64,
+        start_at: i64,
+        increment_play_count: bool,
+    ) -> Result<()> {
+        let Some((path, mtime)) = self
+            .track_by_id(track_id)
+            .map(|track| (track.path.clone(), track.mtime))
+        else {
+            return Ok(());
+        };
+
+        self.player.play_file(&path, mtime, start_at)?;
+        self.session.playback_state.current_track_id = Some(track_id);
+        self.session.playback_state.position_secs = start_at;
+        if increment_play_count {
+            self.storage.increment_play_count(track_id)?;
+        }
+        self.persist_playback_state()?;
         Ok(())
     }
 }

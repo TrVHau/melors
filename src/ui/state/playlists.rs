@@ -20,8 +20,6 @@ impl UiState {
         self.mode = InputMode::PlaylistModal;
         self.playlist_modal_visible = true;
         self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
-        self.playlist_name_input.clear();
-        self.playlist_selected = 0;
         self.playlist_item_selected = 0;
     }
 
@@ -29,13 +27,15 @@ impl UiState {
         self.mode = InputMode::Normal;
         self.playlist_modal_visible = false;
         self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
-        self.playlist_name_input.clear();
         self.playlist_item_selected = 0;
     }
 
     pub fn selected_playlist_id(&self, app: &App) -> Result<Option<i64>> {
         let playlists = app.list_playlists_action()?;
         if playlists.is_empty() {
+            return Ok(None);
+        }
+        if self.playlist_selected >= playlists.len() {
             return Ok(None);
         }
         let idx = self.playlist_selected.min(playlists.len() - 1);
@@ -48,11 +48,7 @@ impl UiState {
 
     pub fn move_playlist_selection(&mut self, app: &App, delta: isize) -> Result<()> {
         let playlists = app.list_playlists_action()?;
-        let len = playlists.len();
-        if len == 0 {
-            self.playlist_selected = 0;
-            return Ok(());
-        }
+        let len = playlists.len().saturating_add(1);
         let next = (self.playlist_selected as isize + delta).clamp(0, len as isize - 1);
         self.playlist_selected = next as usize;
         Ok(())

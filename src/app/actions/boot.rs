@@ -33,6 +33,8 @@ impl App {
                 tracks_version: 1,
                 queue,
                 queue_version: 1,
+                active_playlist_id: None,
+                active_playlist_name: None,
                 playback_state,
             },
             playback_state_dirty: false,

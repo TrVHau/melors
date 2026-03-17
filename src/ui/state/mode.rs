@@ -41,36 +41,16 @@ impl UiState {
         self.edit_tag_field = 0;
     }
 
-    pub fn focus_right(&mut self) {
-        self.focus = match self.focus {
-            FocusPanel::Library => FocusPanel::Queue,
-            FocusPanel::Queue => FocusPanel::Library,
-        };
-    }
-
     pub fn move_selection(&mut self, app: &App, delta: isize) {
-        let len = match self.focus {
-            FocusPanel::Library => self.visible_track_ids(app).len(),
-            FocusPanel::Queue => self.queue_track_ids(app).len(),
-        };
+        let len = self.visible_track_ids(app).len();
 
         if len == 0 {
-            match self.focus {
-                FocusPanel::Library => self.library_selected = 0,
-                FocusPanel::Queue => self.queue_selected = 0,
-            }
+            self.library_selected = 0;
             return;
         }
 
-        let current = match self.focus {
-            FocusPanel::Library => self.library_selected,
-            FocusPanel::Queue => self.queue_selected,
-        } as isize;
+        let current = self.library_selected as isize;
         let next = (current + delta).clamp(0, len as isize - 1);
-
-        match self.focus {
-            FocusPanel::Library => self.library_selected = next as usize,
-            FocusPanel::Queue => self.queue_selected = next as usize,
-        }
+        self.library_selected = next as usize;
     }
 }
