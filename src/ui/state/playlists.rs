@@ -21,6 +21,7 @@ impl UiState {
         self.playlist_modal_visible = true;
         self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
         self.playlist_item_selected = 0;
+        self.playlist_add_track_id = None;
     }
 
     pub fn exit_playlist_modal(&mut self) {
@@ -28,6 +29,7 @@ impl UiState {
         self.playlist_modal_visible = false;
         self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
         self.playlist_item_selected = 0;
+        self.playlist_add_track_id = None;
     }
 
     pub fn selected_playlist_id(&self, app: &App) -> Result<Option<i64>> {

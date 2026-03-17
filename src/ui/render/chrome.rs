@@ -38,12 +38,12 @@ impl UiState {
             .constraints([Constraint::Percentage(62), Constraint::Percentage(38)])
             .split(area);
 
-        self.draw_library(f, rows[0], app);
         if self.mode == InputMode::PlaylistModal {
-            self.draw_playlist_modal(f, rows[1], app);
+            self.draw_playlist_modal(f, rows[0], app);
         } else {
-            self.draw_now_playing(f, rows[1], app);
+            self.draw_library(f, rows[0], app);
         }
+        self.draw_now_playing(f, rows[1], app);
     }
 
     fn draw_compact_layout(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
@@ -57,12 +57,12 @@ impl UiState {
             .constraints([Constraint::Percentage(62), Constraint::Percentage(38)])
             .split(rows[0]);
 
-        self.draw_library(f, top[0], app);
         if self.mode == InputMode::PlaylistModal {
-            self.draw_playlist_modal(f, top[1], app);
+            self.draw_playlist_modal(f, top[0], app);
         } else {
-            self.draw_now_playing(f, top[1], app);
+            self.draw_library(f, top[0], app);
         }
+        self.draw_now_playing(f, top[1], app);
 
         if self.mode == InputMode::PlaylistModal {
             let bottom = Layout::default()
@@ -70,7 +70,7 @@ impl UiState {
                 .constraints([Constraint::Percentage(42), Constraint::Percentage(58)])
                 .split(rows[1]);
             self.draw_progress(f, bottom[0], app);
-            self.draw_now_playing(f, bottom[1], app);
+            self.draw_visualizer_panel(f, bottom[1], app);
         } else {
             let bottom = Layout::default()
                 .direction(Direction::Horizontal)
@@ -92,27 +92,19 @@ impl UiState {
             .constraints([Constraint::Percentage(64), Constraint::Percentage(36)])
             .split(rows[0]);
 
-        self.draw_library(f, top[0], app);
         if self.mode == InputMode::PlaylistModal {
-            self.draw_playlist_modal(f, top[1], app);
+            self.draw_playlist_modal(f, top[0], app);
         } else {
-            self.draw_now_playing(f, top[1], app);
+            self.draw_library(f, top[0], app);
         }
+        self.draw_now_playing(f, top[1], app);
 
         let bottom = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints(if self.mode == InputMode::PlaylistModal {
-                [Constraint::Percentage(34), Constraint::Percentage(66)]
-            } else {
-                [Constraint::Percentage(36), Constraint::Percentage(64)]
-            })
+            .constraints([Constraint::Percentage(36), Constraint::Percentage(64)])
             .split(rows[1]);
         self.draw_progress(f, bottom[0], app);
-        if self.mode == InputMode::PlaylistModal {
-            self.draw_now_playing(f, bottom[1], app);
-        } else {
-            self.draw_visualizer_panel(f, bottom[1], app);
-        }
+        self.draw_visualizer_panel(f, bottom[1], app);
     }
 
     pub(super) fn draw_header(&self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {

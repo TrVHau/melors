@@ -94,7 +94,16 @@ impl UiState {
                         Some(self.playlist_item_selected)
                     },
                     self.theme_queue_color(),
-                    " Up/Down move | Enter play | a add current track | Esc back ",
+                    " Up/Down move | Enter play | d remove | Esc back ",
+                )
+            } else if self.playlist_modal_mode == PlaylistModalMode::RenamePlaylist {
+                let display = format!("Name: {}_", self.playlist_rename_input);
+                (
+                    String::from(" Rename Playlist "),
+                    vec![ListItem::new(fit_text(&display, content_width))],
+                    None,
+                    self.theme_library_color(),
+                    " Type name | Enter save | Esc cancel ",
                 )
             } else {
                 let mut rows: Vec<ListItem<'_>> = if playlists.is_empty() {
@@ -110,12 +119,34 @@ impl UiState {
                 };
                 rows.push(ListItem::new(fit_text("+ New playlist", content_width)));
 
+                let picker_mode = self.playlist_add_track_id.is_some();
+                let title = if let Some(track_id) = self.playlist_add_track_id {
+                    let track_label = app
+                        .track_by_id(track_id)
+                        .map(|track| {
+                            format!(
+                                "{} - {}",
+                                track.artist.as_deref().unwrap_or("Unknown Artist"),
+                                track.title
+                            )
+                        })
+                        .unwrap_or_else(|| format!("#{}", track_id));
+                    format!(" Add: {} ", fit_text(&track_label, content_width.saturating_sub(6)))
+                } else {
+                    format!(" Playlists ({}) ", playlists.len())
+                };
+                let helper = if picker_mode {
+                    " Up/Down move | Enter add/create+add | Esc cancel "
+                } else {
+                    " Up/Down move | Enter open/create | r rename | Esc close "
+                };
+
                 (
-                    format!(" Playlists ({}) ", playlists.len()),
+                    title,
                     rows,
                     Some(self.playlist_selected.min(playlists.len())),
                     self.theme_library_color(),
-                    " Up/Down move | Enter open/create | a add current track | Esc close ",
+                    helper,
                 )
             };
 

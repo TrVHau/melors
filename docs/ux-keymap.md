@@ -15,7 +15,7 @@ This file documents the keymap currently implemented in `src/ui/input/*`.
 - `Alt+1`: visualizer demo bars
 - `Alt+2`: visualizer clock
 - `Alt+3`: visualizer cmatrix
-- `Alt+T`: cycle theme
+- `Alt+T`: cycle theme (`Neon -> Amber -> Mono -> Forest -> Ocean -> Rose -> Desert -> Ice`)
 
 ## Normal Mode
 
@@ -67,12 +67,15 @@ Only four controls are used inside playlist mode:
 
 - `Up` / `Down`: move selection
 - `Enter`: open selected playlist, play selected item, or create a new playlist from the `+ New playlist` row
-- `a`: add selected/current track into the selected playlist; if `+ New playlist` is selected, melors creates one automatically first
+- `a` (from Library/Normal mode): opens playlist picker to choose target playlist for the selected/current track
+- `d`: remove selected item from the opened playlist
+- `r`: rename selected playlist (from playlist list)
 - `Esc`: go back from items to playlists, or close the playlist modal from playlist list
 
 ## Notes
 
 - The old rename mode (`m`, `M`) is no longer active; metadata editing is done via `t`/`T` only.
-- Playlist naming is automatic (`Playlist 1`, `Playlist 2`, ...).
+- Playlist naming defaults to automatic (`Playlist 1`, `Playlist 2`, ...) and can be changed with `r`.
+- In playlist items view, modification is remove-only (`d`); adding is initiated from Library with `a`.
 - Opening or playing a playlist makes that playlist become the current `Up Next` source.
 - Status and header text are intentionally minimal; the UI no longer repeats full key hints on every screen.

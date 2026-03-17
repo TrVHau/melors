@@ -17,6 +17,7 @@ pub enum InputMode {
 pub enum PlaylistModalMode {
     BrowsePlaylists,
     BrowseItems,
+    RenamePlaylist,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -33,6 +34,10 @@ pub enum UiTheme {
     Amber,
     Mono,
     Forest,
+    Ocean,
+    Rose,
+    Desert,
+    Ice,
 }
 
 impl UiTheme {
@@ -41,7 +46,11 @@ impl UiTheme {
             Self::Neon => Self::Amber,
             Self::Amber => Self::Mono,
             Self::Mono => Self::Forest,
-            Self::Forest => Self::Neon,
+            Self::Forest => Self::Ocean,
+            Self::Ocean => Self::Rose,
+            Self::Rose => Self::Desert,
+            Self::Desert => Self::Ice,
+            Self::Ice => Self::Neon,
         }
     }
 }
@@ -53,6 +62,10 @@ impl fmt::Display for UiTheme {
             Self::Amber => write!(f, "Amber"),
             Self::Mono => write!(f, "Mono"),
             Self::Forest => write!(f, "Forest"),
+            Self::Ocean => write!(f, "Ocean"),
+            Self::Rose => write!(f, "Rose"),
+            Self::Desert => write!(f, "Desert"),
+            Self::Ice => write!(f, "Ice"),
         }
     }
 }
@@ -86,6 +99,8 @@ pub struct UiState {
     pub playlist_modal_mode: PlaylistModalMode,
     pub playlist_selected: usize,
     pub playlist_item_selected: usize,
+    pub playlist_rename_input: String,
+    pub playlist_add_track_id: Option<i64>,
     pub playlist_action_latency_samples: u64,
     pub playlist_action_latency_total_micros: u128,
     pub playlist_action_latency_max_micros: u128,
@@ -124,6 +139,8 @@ impl UiState {
             playlist_modal_mode: PlaylistModalMode::BrowsePlaylists,
             playlist_selected: 0,
             playlist_item_selected: 0,
+            playlist_rename_input: String::new(),
+            playlist_add_track_id: None,
             playlist_action_latency_samples: 0,
             playlist_action_latency_total_micros: 0,
             playlist_action_latency_max_micros: 0,

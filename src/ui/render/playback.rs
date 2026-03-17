@@ -166,25 +166,32 @@ impl UiState {
 
     pub(super) fn draw_statusbar(&self, f: &mut ratatui::Frame<'_>, area: Rect) {
         let text = match self.mode {
-            InputMode::Search => format!(" /{}_ ", self.search_input),
+            InputMode::Normal => {
+                format!(
+                    " {} | Up/Down Move | Enter Play | l Playlist | s Search | q Quit ",
+                    self.status
+                )
+            }
+            InputMode::Search => {
+                format!(
+                    " /{}_ | Up/Down Move | Enter Play | Esc Exit ",
+                    self.search_input
+                )
+            }
+            InputMode::PlaylistModal => {
+                format!(
+                    " {} | Up/Down Move | Enter Open/Play/Create | d Remove | r Rename | Esc Back/Close ",
+                    self.status
+                )
+            }
             InputMode::EditTag => {
                 let field_name = ["Title", "Artist", "Album"][self.edit_tag_field];
                 let value = &self.edit_tag_inputs[self.edit_tag_field];
-                format!(" Edit Tag [{}] -> {}_ ", field_name, value)
+                format!(
+                    " Edit [{}]: {}_ | Tab Next | Enter Save | Esc Cancel ",
+                    field_name, value
+                )
             }
-            InputMode::PlaylistModal => {
-                format!(" {} ", self.status)
-            }
-            InputMode::Normal => format!(" {} ", self.status),
-        };
-        let text = if self.mode == InputMode::Normal {
-            format!(" {} ", self.status)
-        } else if self.mode == InputMode::Search {
-            format!(" /{}_ ", self.search_input)
-        } else if self.mode == InputMode::PlaylistModal {
-            format!(" {} ", self.status)
-        } else {
-            text
         };
         let p = Paragraph::new(text).style(
             Style::default()

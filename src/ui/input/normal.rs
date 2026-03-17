@@ -22,14 +22,19 @@ impl UiState {
             return Ok(());
         };
 
-        let Some(playlist_id) = self.ensure_playlist_for_add(app)? else {
-            return Ok(());
-        };
-
-        let msg = app
-            .add_playlist_item_action(playlist_id, track_id)
-            .status_message();
-        self.status = format!("{} (playlist #{})", msg.text, playlist_id);
+        self.enter_playlist_modal();
+        self.playlist_add_track_id = Some(track_id);
+        let track_label = app
+            .track_by_id(track_id)
+            .map(|track| {
+                format!(
+                    "{} - {}",
+                    track.artist.as_deref().unwrap_or("Unknown Artist"),
+                    track.title
+                )
+            })
+            .unwrap_or_else(|| format!("#{}", track_id));
+        self.status = format!("Select playlist for {}", track_label);
         Ok(())
     }
 

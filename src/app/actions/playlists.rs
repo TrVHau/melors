@@ -25,6 +25,10 @@ pub enum PlaylistActionResult {
     PlaylistDeleted {
         playlist_id: i64,
     },
+    PlaylistRenamed {
+        playlist_id: i64,
+        name: String,
+    },
     PlaylistItemAdded {
         playlist_id: i64,
         track_id: i64,
@@ -71,6 +75,11 @@ impl PlaylistActionResult {
                 level: ActionStatusLevel::Info,
                 code: "playlist.deleted",
                 text: String::from("Playlist deleted"),
+            },
+            Self::PlaylistRenamed { name, .. } => ActionStatusMessage {
+                level: ActionStatusLevel::Info,
+                code: "playlist.renamed",
+                text: format!("Playlist renamed: {name}"),
             },
             Self::PlaylistItemAdded { .. } => ActionStatusMessage {
                 level: ActionStatusLevel::Info,
@@ -139,6 +148,21 @@ impl App {
                 PlaylistActionResult::PlaylistDeleted { playlist_id }
             }
             Err(err) => classify_storage_error("delete_playlist", err),
+        }
+    }
+
+    pub fn rename_playlist_action(&mut self, playlist_id: i64, name: &str) -> PlaylistActionResult {
+        match self.storage.rename_playlist(playlist_id, name) {
+            Ok(()) => {
+                if self.session.active_playlist_id == Some(playlist_id) {
+                    self.session.active_playlist_name = Some(name.trim().to_string());
+                }
+                PlaylistActionResult::PlaylistRenamed {
+                    playlist_id,
+                    name: name.trim().to_string(),
+                }
+            }
+            Err(err) => classify_storage_error("rename_playlist", err),
         }
     }
 
