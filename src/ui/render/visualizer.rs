@@ -8,10 +8,25 @@ impl UiState {
         app: &App,
     ) {
         match self.visualizer_mode {
+            VisualizerMode::Off => self.draw_off_visualizer(f, area),
             VisualizerMode::Cava => self.draw_cava_visualizer(f, area, app),
             VisualizerMode::Clock => self.draw_clock_visualizer(f, area),
             VisualizerMode::CMatrix => self.draw_cmatrix_visualizer(f, area, app),
         }
+    }
+
+    pub(super) fn draw_off_visualizer(&self, f: &mut ratatui::Frame<'_>, area: Rect) {
+        let lines = self.centered_creeper_lines(area);
+        let paragraph = Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Visualizer [Off] ")
+                    .style(Style::default().bg(self.theme_panel_bg_color()))
+                    .border_style(Style::default().fg(self.theme_dim_color())),
+            )
+            .style(Style::default().bg(self.theme_panel_bg_color()));
+        f.render_widget(paragraph, area);
     }
 
     pub(super) fn draw_cava_visualizer(
@@ -20,6 +35,7 @@ impl UiState {
         area: Rect,
         app: &App,
     ) {
+        let _ = app.visualizer_levels(1);
         let inner = self.visualizer_inner(area);
         let width = inner.width.max(1) as usize;
         let height = inner.height.max(1) as usize;
@@ -28,12 +44,29 @@ impl UiState {
         if self.cava_cached_levels.len() != bars
             || tick_ms.saturating_sub(self.visualizer_last_update_ms) >= 33
         {
-            let fresh = app.visualizer_levels(bars);
-            if self.cava_cached_levels.len() == fresh.len() {
-                for (idx, new_value) in fresh.iter().enumerate() {
+            // Keep tick in a small range to avoid f32 precision loss from epoch-sized values.
+            let tick = ((self.visualizer_tick() as u64 % 600_000) as f32) / 1000.0;
+            let seed = (self.cached_track_seed(app) % 997) as f32 / 997.0;
+            let fresh: Vec<(f32, f32)> = (0..bars)
+                .map(|idx| {
+                    let lane = idx as f32 / bars as f32;
+                    let drift = tick * 2.8;
+                    let lane_phase = lane * std::f32::consts::TAU * 2.4 + drift + seed * 4.0;
+                    let sweep = lane_phase.sin();
+                    let ripple = (lane_phase * 1.8 + tick * 4.7).cos();
+                    let bounce = (lane_phase * 0.6 + tick * 9.5).sin();
+                    let level = ((sweep * 0.50 + ripple * 0.30 + bounce * 0.35) * 0.5 + 0.5)
+                        .clamp(0.08, 1.0);
+                    let peak = (level + 0.12 + (lane * 0.15)).clamp(0.0, 1.0);
+                    (level, peak.clamp(0.0, 1.0))
+                })
+                .collect();
+
+            if self.cava_cached_levels.len() == bars {
+                for (idx, new_value) in fresh.into_iter().enumerate() {
                     let old = self.cava_cached_levels[idx];
-                    let level = old.0 * 0.65 + new_value.0 * 0.35;
-                    let peak = new_value.1.max(old.1 * 0.92);
+                    let level = old.0 * 0.25 + new_value.0 * 0.75;
+                    let peak = new_value.1.max(old.1 * 0.88);
                     self.cava_cached_levels[idx] = (level, peak);
                 }
             } else {
@@ -78,7 +111,7 @@ impl UiState {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(" Visualizer [Cava] ")
+                    .title(" Visualizer [Demo Bars] ")
                     .style(Style::default().bg(self.theme_panel_bg_color()))
                     .border_style(Style::default().fg(self.theme_dim_color())),
             )
@@ -251,5 +284,73 @@ impl UiState {
         content.push_str(&" ".repeat(left_pad));
         content.push_str(text);
         Line::from(vec![Span::styled(content, Style::default().fg(color))])
+    }
+
+    fn centered_creeper_lines(&self, area: Rect) -> Vec<Line<'static>> {
+        // 8x8 editable template:
+        // 0 = transparent(panel bg), 1 = green, 2 = lime, 3 = black, 4 = white.
+        // Bạn chỉ cần sửa ma trận TILE bên dưới để vẽ lại creeper theo ý muốn.
+        const TILE: [[u8; 8]; 8] = [
+            [1, 1, 2, 2, 1, 1, 1, 2],
+            [1, 1, 2, 1, 2, 2, 1, 1],
+            [2, 3, 3, 1, 1, 3, 3, 1],
+            [1, 3, 3, 2, 1, 3, 3, 1],
+            [2, 1, 1, 3, 3, 2, 2, 1],
+            [1, 2, 3, 3, 3, 3, 1, 2],
+            [2, 1, 3, 3, 3, 3, 2, 1],
+            [1, 2, 3, 1, 1, 3, 2, 1],
+        ];
+        let inner_h = area.height.saturating_sub(2) as usize;
+        let inner_w = area.width.saturating_sub(2) as usize;
+        if inner_h == 0 || inner_w == 0 {
+            return Vec::new();
+        }
+
+        let colors = [
+            self.theme_panel_bg_color(),
+            Color::Rgb(88, 149, 52),
+            Color::Rgb(132, 209, 78),
+            Color::Rgb(10, 12, 10),
+            Color::Rgb(236, 236, 236),
+        ];
+        let tile_h = TILE.len();
+        let tile_w = TILE[0].len() * 2; // double width keeps pixel-ish proportions
+        let offset_y = inner_h.saturating_sub(tile_h) / 2;
+        let offset_x = inner_w.saturating_sub(tile_w) / 2;
+
+        let mut lines: Vec<Line<'static>> = Vec::with_capacity(inner_h);
+        for y in 0..inner_h {
+            let mut spans: Vec<Span<'static>> = Vec::new();
+            let mut run_start = 0usize;
+            let mut run_style = Style::default().bg(colors[0]);
+
+            for x in 0..inner_w {
+                let style = if y >= offset_y
+                    && y < offset_y + tile_h
+                    && x >= offset_x
+                    && x < offset_x + tile_w
+                {
+                    let ly = y - offset_y;
+                    let lx = (x - offset_x) / 2;
+                    let color_idx = TILE[ly][lx] as usize;
+                    Style::default().bg(colors[color_idx])
+                } else {
+                    Style::default().bg(self.theme_panel_bg_color())
+                };
+
+                if x == 0 {
+                    run_style = style;
+                    continue;
+                }
+                if style != run_style {
+                    spans.push(Span::styled(" ".repeat(x - run_start), run_style));
+                    run_start = x;
+                    run_style = style;
+                }
+            }
+            spans.push(Span::styled(" ".repeat(inner_w - run_start), run_style));
+            lines.push(Line::from(spans));
+        }
+        lines
     }
 }

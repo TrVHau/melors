@@ -27,9 +27,14 @@ impl UiState {
         }
 
         match key.code {
+            KeyCode::Char('0') => {
+                self.set_visualizer_mode(VisualizerMode::Off);
+                self.status = String::from("Visualizer: Off (low power)");
+                true
+            }
             KeyCode::Char('1') => {
                 self.set_visualizer_mode(VisualizerMode::Cava);
-                self.status = String::from("Visualizer: Cava");
+                self.status = String::from("Visualizer: Demo Bars");
                 true
             }
             KeyCode::Char('2') => {

@@ -24,6 +24,7 @@ pub enum PlaylistModalMode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VisualizerMode {
+    Off,
     Cava,
     Clock,
     CMatrix,
@@ -62,6 +63,7 @@ impl fmt::Display for UiTheme {
 impl fmt::Display for VisualizerMode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Off => write!(f, "Off"),
             Self::Cava => write!(f, "Cava"),
             Self::Clock => write!(f, "Clock"),
             Self::CMatrix => write!(f, "CMatrix"),
@@ -120,7 +122,7 @@ impl UiState {
             focus: FocusPanel::Library,
             mode: InputMode::Normal,
             theme: UiTheme::Neon,
-            visualizer_mode: VisualizerMode::Cava,
+            visualizer_mode: VisualizerMode::Off,
             visualizer_last_update_ms: 0,
             cava_cached_levels: Vec::new(),
             search_input: String::new(),

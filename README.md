@@ -116,9 +116,10 @@ Tag editor:
 
 ### Playback Modes and Visualizer
 
+- `Alt+0`: visualizer `Off` (low-power mode)
 - `e`: cycle repeat (`Off -> One -> All`)
 - `u`: toggle shuffle
-- `Alt+1`: visualizer `Cava`
+- `Alt+1`: visualizer `Demo Bars` (lightweight example)
 - `Alt+2`: visualizer `Clock`
 - `Alt+3`: visualizer `CMatrix`
 - `Alt+T`: cycle UI theme (`Neon -> Amber -> Mono -> Forest`)

@@ -7,15 +7,11 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
-use rustfft::num_complex::Complex32;
-use rustfft::{Fft, FftPlanner};
 
 mod analysis;
 mod control;
 
 const ANALYSIS_BANDS: usize = 36;
-const FFT_WINDOW_SIZE: usize = 1024;
-const FFT_HOP_SIZE: usize = 4096;
 const MAX_ANALYSIS_CACHE_ITEMS: usize = 24;
 const MAX_CONCURRENT_ANALYSIS_JOBS: usize = 2;
 const MAX_QUEUED_ANALYSIS_JOBS: usize = 32;
