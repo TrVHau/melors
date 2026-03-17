@@ -2,6 +2,7 @@ use super::*;
 
 impl UiState {
     pub fn handle_key(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
+        let started = std::time::Instant::now();
         if key.kind != event::KeyEventKind::Press {
             return Ok(false);
         }
@@ -10,14 +11,15 @@ impl UiState {
             return Ok(false);
         }
 
-        match self.mode {
-            InputMode::Search => return self.handle_search_input(app, key),
-            InputMode::Rename => return self.handle_rename_input(app, key),
-            InputMode::EditTag => return self.handle_edit_tag_input(app, key),
-            InputMode::Normal => {}
-        }
-
-        self.handle_normal_key(app, key)
+        let should_quit = match self.mode {
+            InputMode::Search => self.handle_search_input(app, key)?,
+            InputMode::Rename => self.handle_rename_input(app, key)?,
+            InputMode::EditTag => self.handle_edit_tag_input(app, key)?,
+            InputMode::PlaylistModal => self.handle_playlist_modal_input(app, key)?,
+            InputMode::Normal => self.handle_normal_key(app, key)?,
+        };
+        self.record_ui_action_latency(started.elapsed().as_micros());
+        Ok(should_quit)
     }
 
     fn handle_alt_shortcuts(&mut self, key: KeyEvent) -> bool {

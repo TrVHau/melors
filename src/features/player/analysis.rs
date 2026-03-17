@@ -1,7 +1,11 @@
 use super::*;
 
 impl Player {
-    pub(super) fn build_sink(handle: &OutputStreamHandle, path: &Path, start_secs: u64) -> Result<Sink> {
+    pub(super) fn build_sink(
+        handle: &OutputStreamHandle,
+        path: &Path,
+        start_secs: u64,
+    ) -> Result<Sink> {
         let file =
             File::open(path).with_context(|| format!("failed to open {}", path.display()))?;
         let reader = BufReader::new(file);
@@ -76,7 +80,11 @@ impl Player {
         })
     }
 
-    pub(super) fn insert_analysis_cache(&mut self, key: AnalysisCacheKey, analysis: VisualizerAnalysis) {
+    pub(super) fn insert_analysis_cache(
+        &mut self,
+        key: AnalysisCacheKey,
+        analysis: VisualizerAnalysis,
+    ) {
         if let Some(cached) = self.analysis_cache.get_mut(&key) {
             *cached = analysis;
             return;

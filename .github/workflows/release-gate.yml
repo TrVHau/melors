@@ -1,0 +1,44 @@
+name: release-gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release-readiness:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies (ALSA)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libasound2-dev
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run release readiness gate
+        env:
+          RELEASE_APPROVER: ci-release-gate
+          RELEASE_CANDIDATE_ID: ci-${{ github.run_id }}
+          RELEASE_NOTES_PATH: docs/README.md
+        run: scripts/release-gate.sh
+
+      - name: Validate crates.io publishability
+        if: github.event_name != 'pull_request'
+        run: |
+          cargo package
+          cargo publish --dry-run
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-readiness-artifacts
+          path: artifacts/release/

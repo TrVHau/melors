@@ -73,27 +73,33 @@ impl UiState {
         self.library_cached_rows.clear();
 
         if self.is_filtering_library() {
-            let tracks = search_tracks(&self.matcher, app.tracks(), &self.search_input);
-            self.library_cached_track_ids.reserve(tracks.len());
-            self.library_cached_rows.reserve(tracks.len());
-            for track in tracks {
-                self.library_cached_track_ids.push(track.id);
-                let marker = if Some(track.id) == current_track_id {
-                    ">"
-                } else {
-                    " "
-                };
-                let favorite = if track.favorite { "*" } else { " " };
-                self.library_cached_rows.push(format!(
-                    "{}{} #{:04} {} - {}",
-                    marker,
-                    favorite,
-                    track.id,
-                    track.artist.as_deref().unwrap_or("Unknown Artist"),
-                    track.title
-                ));
+            self.search_warning = Self::search_warning_for_query(&self.search_input);
+            let ids = app
+                .search_track_ids_action(&self.search_input)
+                .unwrap_or_default();
+            self.library_cached_track_ids.reserve(ids.len());
+            self.library_cached_rows.reserve(ids.len());
+            for track_id in ids {
+                if let Some(track) = app.track_by_id(track_id) {
+                    self.library_cached_track_ids.push(track.id);
+                    let marker = if Some(track.id) == current_track_id {
+                        ">"
+                    } else {
+                        " "
+                    };
+                    let favorite = if track.favorite { "*" } else { " " };
+                    self.library_cached_rows.push(format!(
+                        "{}{} #{:04} {} - {}",
+                        marker,
+                        favorite,
+                        track.id,
+                        track.artist.as_deref().unwrap_or("Unknown Artist"),
+                        track.title
+                    ));
+                }
             }
         } else {
+            self.search_warning = None;
             let tracks = app.tracks();
             self.library_cached_track_ids.reserve(tracks.len());
             self.library_cached_rows.reserve(tracks.len());

@@ -7,8 +7,10 @@ use crate::core::model::{PlaybackState, RepeatMode, Track, TrackInput};
 
 mod migrations;
 mod playback;
+mod playlists;
 mod queue;
 mod tracks;
+pub use playlists::{Playlist, PlaylistItem};
 
 pub struct Storage {
     conn: Connection,

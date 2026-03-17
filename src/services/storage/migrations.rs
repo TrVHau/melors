@@ -56,6 +56,15 @@ impl Storage {
                 FOREIGN KEY(playlist_id) REFERENCES playlists(id),
                 FOREIGN KEY(track_id) REFERENCES tracks(id)
             );
+
+            CREATE INDEX IF NOT EXISTS idx_playlist_items_playlist_order
+                ON playlist_items(playlist_id, order_index);
+            CREATE INDEX IF NOT EXISTS idx_tracks_artist_nocase
+                ON tracks(artist COLLATE NOCASE);
+            CREATE INDEX IF NOT EXISTS idx_tracks_album_nocase
+                ON tracks(album COLLATE NOCASE);
+            CREATE INDEX IF NOT EXISTS idx_tracks_favorite
+                ON tracks(favorite);
             ",
         )?;
         self.conn.execute(

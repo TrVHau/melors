@@ -14,6 +14,7 @@ impl UiState {
         self.focus = FocusPanel::Library;
         self.mode = InputMode::Search;
         self.search_input.clear();
+        self.search_warning = None;
         self.library_selected = 0;
         self.invalidate_library_cache();
     }
@@ -21,6 +22,7 @@ impl UiState {
     pub fn exit_search_mode(&mut self) {
         self.mode = InputMode::Normal;
         self.search_input.clear();
+        self.search_warning = None;
         self.library_selected = 0;
         self.invalidate_library_cache();
     }

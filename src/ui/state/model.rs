@@ -12,12 +12,19 @@ pub enum InputMode {
     Search,
     Rename,
     EditTag,
+    PlaylistModal,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RenameKind {
     Title,
     Artist,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlaylistModalMode {
+    BrowsePlaylists,
+    BrowseItems,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -84,6 +91,14 @@ pub struct UiState {
     pub library_selected: usize,
     pub queue_selected: usize,
     pub status: String,
+    pub search_warning: Option<String>,
+    pub playlist_modal_visible: bool,
+    pub playlist_modal_mode: PlaylistModalMode,
+    pub playlist_selected: usize,
+    pub playlist_item_selected: usize,
+    pub playlist_action_latency_samples: u64,
+    pub playlist_action_latency_total_micros: u128,
+    pub playlist_action_latency_max_micros: u128,
     pub(super) library_cache_tracks_version: u64,
     pub(super) library_cache_query: String,
     pub(super) library_cache_mode: InputMode,
@@ -92,7 +107,6 @@ pub struct UiState {
     pub(super) library_cached_rows: Vec<String>,
     pub(super) library_render_width: usize,
     pub(super) library_cached_render_rows: Vec<String>,
-    pub(super) matcher: SkimMatcherV2,
     pub(super) seed_cache_valid: bool,
     pub(super) seed_cached_track_id: Option<i64>,
     pub(super) seed_cached_tracks_version: u64,
@@ -108,6 +122,7 @@ pub struct UiState {
 
 impl UiState {
     pub fn new() -> Self {
+        Self::assert_keymap_compatibility();
         Self {
             focus: FocusPanel::Library,
             mode: InputMode::Normal,
@@ -125,6 +140,14 @@ impl UiState {
             library_selected: 0,
             queue_selected: 0,
             status: String::from("Ready"),
+            search_warning: None,
+            playlist_modal_visible: false,
+            playlist_modal_mode: PlaylistModalMode::BrowsePlaylists,
+            playlist_selected: 0,
+            playlist_item_selected: 0,
+            playlist_action_latency_samples: 0,
+            playlist_action_latency_total_micros: 0,
+            playlist_action_latency_max_micros: 0,
             library_cache_tracks_version: 0,
             library_cache_query: String::new(),
             library_cache_mode: InputMode::Normal,
@@ -133,7 +156,6 @@ impl UiState {
             library_cached_rows: Vec::new(),
             library_render_width: 0,
             library_cached_render_rows: Vec::new(),
-            matcher: SkimMatcherV2::default(),
             seed_cache_valid: false,
             seed_cached_track_id: None,
             seed_cached_tracks_version: 0,

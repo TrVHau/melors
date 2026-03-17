@@ -21,7 +21,9 @@ Thumbs.db
 
 # Runtime logs
 *.log
+artifacts/
 
 # Workflow files
 AGENTS.md
 .aidlc-rule-details/
+aidlc-docs/

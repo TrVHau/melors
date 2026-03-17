@@ -28,26 +28,24 @@ impl App {
     }
 
     pub fn next_track(&mut self) -> Result<()> {
-        if self.session.queue.is_empty() {
-            return Ok(());
-        }
         let current_idx = self
             .session
             .playback_state
             .current_track_id
-            .and_then(|id| self.session.queue.iter().position(|queue_id| *queue_id == id))
+            .and_then(|id| {
+                self.session
+                    .queue
+                    .iter()
+                    .position(|queue_id| *queue_id == id)
+            })
             .unwrap_or(usize::MAX);
 
-        let next_idx = if current_idx == usize::MAX {
-            0
-        } else if current_idx + 1 < self.session.queue.len() {
-            current_idx + 1
-        } else {
-            match self.session.playback_state.repeat_mode {
-                RepeatMode::RepeatAll => 0,
-                RepeatMode::RepeatOne => current_idx,
-                RepeatMode::Off => return Ok(()),
-            }
+        let Some(next_idx) = compute_next_track_index(
+            self.session.queue.len(),
+            current_idx,
+            self.session.playback_state.repeat_mode,
+        ) else {
+            return Ok(());
         };
 
         let id = self.session.queue[next_idx];
@@ -55,18 +53,21 @@ impl App {
     }
 
     pub fn prev_track(&mut self) -> Result<()> {
-        if self.session.queue.is_empty() {
-            return Ok(());
-        }
-
         let current_idx = self
             .session
             .playback_state
             .current_track_id
-            .and_then(|id| self.session.queue.iter().position(|queue_id| *queue_id == id))
+            .and_then(|id| {
+                self.session
+                    .queue
+                    .iter()
+                    .position(|queue_id| *queue_id == id)
+            })
             .unwrap_or(0);
 
-        let prev_idx = if current_idx == 0 { 0 } else { current_idx - 1 };
+        let Some(prev_idx) = compute_prev_track_index(self.session.queue.len(), current_idx) else {
+            return Ok(());
+        };
 
         let id = self.session.queue[prev_idx];
         self.play_track(id)
@@ -174,5 +175,69 @@ impl App {
         self.last_persisted_at = Some(std::time::Instant::now());
         self.playback_state_dirty = false;
         Ok(())
+    }
+}
+
+fn compute_next_track_index(
+    queue_len: usize,
+    current_idx: usize,
+    repeat_mode: RepeatMode,
+) -> Option<usize> {
+    if queue_len == 0 {
+        return None;
+    }
+    if current_idx == usize::MAX {
+        return Some(0);
+    }
+    if current_idx + 1 < queue_len {
+        return Some(current_idx + 1);
+    }
+    match repeat_mode {
+        RepeatMode::RepeatAll => Some(0),
+        RepeatMode::RepeatOne => Some(current_idx),
+        RepeatMode::Off => None,
+    }
+}
+
+fn compute_prev_track_index(queue_len: usize, current_idx: usize) -> Option<usize> {
+    if queue_len == 0 {
+        return None;
+    }
+    if current_idx == 0 {
+        Some(0)
+    } else {
+        Some(current_idx - 1)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{compute_next_track_index, compute_prev_track_index};
+    use crate::core::model::RepeatMode;
+
+    #[test]
+    fn next_track_index_respects_repeat_modes() {
+        assert_eq!(
+            compute_next_track_index(3, 2, RepeatMode::Off),
+            None,
+            "no wrap when repeat is off"
+        );
+        assert_eq!(
+            compute_next_track_index(3, 2, RepeatMode::RepeatAll),
+            Some(0),
+            "wrap when repeat all"
+        );
+        assert_eq!(
+            compute_next_track_index(3, 2, RepeatMode::RepeatOne),
+            Some(2),
+            "stay on same when repeat one"
+        );
+    }
+
+    #[test]
+    fn prev_track_index_clamps_to_zero() {
+        assert_eq!(compute_prev_track_index(3, 0), Some(0));
+        assert_eq!(compute_prev_track_index(3, 2), Some(1));
+        assert_eq!(compute_prev_track_index(0, 0), None);
     }
 }

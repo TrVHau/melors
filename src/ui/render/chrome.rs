@@ -36,6 +36,9 @@ impl UiState {
         if self.mode == InputMode::EditTag {
             self.draw_edit_tag_popup(f);
         }
+        if self.mode == InputMode::PlaylistModal {
+            self.draw_playlist_modal(f, app);
+        }
     }
 
     pub(super) fn draw_header(&self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {

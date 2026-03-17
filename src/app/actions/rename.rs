@@ -21,7 +21,8 @@ impl App {
             (old_path, new_path)
         };
         std::fs::rename(&old_path, &new_path)?;
-        self.storage.rename_track(track_id, new_title, &new_path.to_string_lossy())?;
+        self.storage
+            .rename_track(track_id, new_title, &new_path.to_string_lossy())?;
         self.reload_session_state()
     }
 
@@ -47,7 +48,11 @@ impl App {
         crate::services::metadata::write_tag(
             &path,
             title,
-            if artist.is_empty() { None } else { Some(artist) },
+            if artist.is_empty() {
+                None
+            } else {
+                Some(artist)
+            },
             if album.is_empty() { None } else { Some(album) },
         )?;
         self.storage

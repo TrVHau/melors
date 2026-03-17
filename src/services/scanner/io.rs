@@ -10,11 +10,13 @@ use crate::core::model::TrackInput;
 use crate::services::metadata;
 
 use super::ScanResult;
+use super::ScanWarningAggregate;
 use super::validate;
 
 pub(super) fn scan_entries(music_dir: &Path) -> Result<ScanResult> {
     let mut upserts = Vec::new();
     let mut seen_paths = HashSet::new();
+    let mut warnings = ScanWarningAggregate::default();
 
     for entry in WalkDir::new(music_dir)
         .follow_links(false)
@@ -28,26 +30,18 @@ pub(super) fn scan_entries(music_dir: &Path) -> Result<ScanResult> {
 
         let canonical = canonicalize_or_original(path);
         let path_text = canonical.to_string_lossy().to_string();
-        seen_paths.insert(path_text);
+        seen_paths.insert(path_text.clone());
 
-        let mtime = match modified_unix_secs(&canonical) {
-            Ok(value) => value,
-            Err(_) => continue,
-        };
-        let tag = metadata::read_metadata(&canonical);
-        upserts.push(TrackInput {
-            path: canonical,
-            mtime,
-            title: tag.title,
-            artist: tag.artist,
-            album: tag.album,
-            duration_secs: tag.duration_secs,
-        });
+        match build_track_input(canonical) {
+            Ok(input) => upserts.push(input),
+            Err(err) => record_warning(&mut warnings, &path_text, &err),
+        }
     }
 
     Ok(ScanResult {
         upserts,
         seen_paths,
+        warnings,
     })
 }
 
@@ -63,4 +57,69 @@ fn modified_unix_secs(path: &Path) -> Result<i64> {
         .unwrap_or_default()
         .as_secs() as i64;
     Ok(mtime)
+}
+
+fn build_track_input(path: PathBuf) -> std::result::Result<TrackInput, String> {
+    let mtime = modified_unix_secs(&path).map_err(|e| e.to_string())?;
+    let tag = metadata::read_metadata(&path);
+    Ok(TrackInput {
+        path,
+        mtime,
+        title: tag.title,
+        artist: tag.artist,
+        album: tag.album,
+        duration_secs: tag.duration_secs,
+    })
+}
+
+fn record_warning(warnings: &mut ScanWarningAggregate, path_text: &str, err: &str) {
+    warnings.failed_files = warnings.failed_files.saturating_add(1);
+    if warnings.failed_paths_sample.len() < 5 {
+        warnings
+            .failed_paths_sample
+            .push(format!("{}: {}", path_text, err));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_track_input_returns_none_for_missing_file() {
+        let missing = PathBuf::from("/tmp/melors-missing-file-for-scan-test.mp3");
+        assert!(build_track_input(missing).is_err());
+    }
+
+    #[test]
+    fn build_track_input_reads_minimal_mp3_like_file() {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("melors-scan-test-{unique}.mp3"));
+        std::fs::write(&path, b"not-a-real-mp3").expect("write temp file");
+
+        let input = build_track_input(path.clone());
+        assert!(input.is_ok());
+        let input = input.expect("track input should exist");
+        assert_eq!(input.path, path);
+        assert!(!input.title.is_empty());
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn warning_samples_are_bounded_but_count_keeps_growing() {
+        let mut warnings = ScanWarningAggregate::default();
+        for idx in 0..8 {
+            record_warning(
+                &mut warnings,
+                &format!("/tmp/failure-{idx}.mp3"),
+                "metadata read failed",
+            );
+        }
+        assert_eq!(warnings.failed_files, 8);
+        assert_eq!(warnings.failed_paths_sample.len(), 5);
+    }
 }

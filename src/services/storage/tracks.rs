@@ -1,4 +1,6 @@
 use super::*;
+use rusqlite::params_from_iter;
+use rusqlite::types::Value;
 
 impl Storage {
     pub fn upsert_tracks(&mut self, inputs: &[TrackInput]) -> Result<()> {
@@ -112,6 +114,47 @@ impl Storage {
         Ok(tracks)
     }
 
+    #[allow(dead_code)]
+    pub fn search_track_ids_with_filters(
+        &self,
+        artist: Option<&str>,
+        album: Option<&str>,
+        favorite: Option<bool>,
+    ) -> Result<Vec<i64>> {
+        let mut sql = String::from("SELECT id FROM tracks WHERE 1=1");
+        let mut params = Vec::<Value>::new();
+
+        if let Some(artist) = artist
+            && !artist.trim().is_empty()
+        {
+            sql.push_str(" AND COALESCE(artist, '') LIKE ? COLLATE NOCASE");
+            params.push(Value::from(format!("%{}%", artist.trim())));
+        }
+
+        if let Some(album) = album
+            && !album.trim().is_empty()
+        {
+            sql.push_str(" AND COALESCE(album, '') LIKE ? COLLATE NOCASE");
+            params.push(Value::from(format!("%{}%", album.trim())));
+        }
+
+        if let Some(favorite) = favorite {
+            sql.push_str(" AND favorite = ?");
+            params.push(Value::from(i64::from(favorite)));
+        }
+
+        sql.push_str(" ORDER BY artist COLLATE NOCASE ASC, album COLLATE NOCASE ASC, title COLLATE NOCASE ASC");
+
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = stmt.query_map(params_from_iter(params), |row| row.get::<_, i64>(0))?;
+
+        let mut out = Vec::new();
+        for row in rows {
+            out.push(row?);
+        }
+        Ok(out)
+    }
+
     pub fn increment_play_count(&self, track_id: i64) -> Result<()> {
         self.conn.execute(
             "UPDATE tracks SET play_count = play_count + 1, last_played_at = CURRENT_TIMESTAMP WHERE id=?1",
@@ -150,5 +193,149 @@ impl Storage {
             params![new_album, track_id],
         )?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_db_path() -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        std::env::temp_dir().join(format!("melors-storage-test-{nanos}.sqlite"))
+    }
+
+    fn cleanup_db(path: &PathBuf) {
+        let _ = fs::remove_file(path);
+        let _ = fs::remove_file(format!("{}-wal", path.to_string_lossy()));
+        let _ = fs::remove_file(format!("{}-shm", path.to_string_lossy()));
+    }
+
+    #[test]
+    fn upsert_preserves_album_when_album_override_enabled() {
+        let db_path = temp_db_path();
+        let mut storage = Storage::open(&db_path).expect("open storage");
+        let track_path = PathBuf::from("/tmp/track-preserve.mp3");
+
+        storage
+            .upsert_tracks(&[TrackInput {
+                path: track_path.clone(),
+                mtime: 100,
+                title: "Song".to_string(),
+                artist: Some("Artist".to_string()),
+                album: Some("Album A".to_string()),
+                duration_secs: Some(180),
+            }])
+            .expect("initial upsert");
+
+        let track_id = storage.load_tracks().expect("load tracks")[0].id;
+        storage
+            .rename_album(track_id, "Manual Album")
+            .expect("rename album");
+
+        storage
+            .upsert_tracks(&[TrackInput {
+                path: track_path,
+                mtime: 100,
+                title: "Song".to_string(),
+                artist: Some("Artist".to_string()),
+                album: Some("Scanned Album".to_string()),
+                duration_secs: Some(180),
+            }])
+            .expect("second upsert");
+
+        let tracks = storage.load_tracks().expect("load tracks after upsert");
+        assert_eq!(tracks.len(), 1);
+        assert_eq!(tracks[0].album.as_deref(), Some("Manual Album"));
+
+        drop(storage);
+        cleanup_db(&db_path);
+    }
+
+    #[test]
+    fn upsert_updates_album_when_album_override_disabled() {
+        let db_path = temp_db_path();
+        let mut storage = Storage::open(&db_path).expect("open storage");
+        let track_path = PathBuf::from("/tmp/track-update.mp3");
+
+        storage
+            .upsert_tracks(&[TrackInput {
+                path: track_path.clone(),
+                mtime: 100,
+                title: "Song".to_string(),
+                artist: Some("Artist".to_string()),
+                album: Some("Album A".to_string()),
+                duration_secs: Some(180),
+            }])
+            .expect("initial upsert");
+
+        storage
+            .upsert_tracks(&[TrackInput {
+                path: track_path,
+                mtime: 101,
+                title: "Song".to_string(),
+                artist: Some("Artist".to_string()),
+                album: Some("Album B".to_string()),
+                duration_secs: Some(180),
+            }])
+            .expect("second upsert");
+
+        let tracks = storage.load_tracks().expect("load tracks after upsert");
+        assert_eq!(tracks.len(), 1);
+        assert_eq!(tracks[0].album.as_deref(), Some("Album B"));
+
+        drop(storage);
+        cleanup_db(&db_path);
+    }
+
+    #[test]
+    fn search_track_ids_with_filters_supports_case_insensitive_partial_and_favorite() {
+        let db_path = temp_db_path();
+        let mut storage = Storage::open(&db_path).expect("open storage");
+
+        storage
+            .upsert_tracks(&[
+                TrackInput {
+                    path: PathBuf::from("/tmp/s1.mp3"),
+                    mtime: 1,
+                    title: "Song 1".to_string(),
+                    artist: Some("Radiohead".to_string()),
+                    album: Some("Kid A".to_string()),
+                    duration_secs: Some(100),
+                },
+                TrackInput {
+                    path: PathBuf::from("/tmp/s2.mp3"),
+                    mtime: 1,
+                    title: "Song 2".to_string(),
+                    artist: Some("Massive Attack".to_string()),
+                    album: Some("Mezzanine".to_string()),
+                    duration_secs: Some(120),
+                },
+            ])
+            .expect("seed tracks");
+
+        let tracks = storage.load_tracks().expect("load tracks");
+        let radiohead_id = tracks
+            .iter()
+            .find(|t| t.artist.as_deref() == Some("Radiohead"))
+            .expect("radiohead track")
+            .id;
+        storage
+            .toggle_favorite(radiohead_id)
+            .expect("favorite track");
+
+        let ids = storage
+            .search_track_ids_with_filters(Some("radio"), Some("kid"), Some(true))
+            .expect("search ids");
+        assert_eq!(ids, vec![radiohead_id]);
+
+        drop(storage);
+        cleanup_db(&db_path);
     }
 }

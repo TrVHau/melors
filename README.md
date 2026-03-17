@@ -19,6 +19,30 @@ cd melors
 cargo run --release
 ```
 
+## Install
+
+After the crate is published on crates.io:
+
+```bash
+cargo install melors
+melors
+```
+
+Install directly from GitHub:
+
+```bash
+cargo install --git https://github.com/TrVHau/melors melors
+melors
+```
+
+Linux build prerequisite (for audio backend):
+
+```bash
+sudo apt-get install -y pkg-config libasound2-dev
+```
+
+If your distro is not Debian/Ubuntu (for example Defora), install equivalent ALSA development packages using your system package manager.
+
 ## Runtime Paths
 
 Created automatically on first run:
@@ -117,6 +141,7 @@ src/
 			mod.rs
 			io.rs
 			validate.rs
+			watcher.rs
 		storage/
 			mod.rs
 			migrations.rs
@@ -124,6 +149,13 @@ src/
 			playback.rs
 			queue.rs
 		metadata.rs
+	quality/
+		mod.rs
+		thresholds.rs
+		evaluator.rs
+		diagnostics.rs
+	release/
+		mod.rs
 	ui/
 		input/
 			dispatch.rs
@@ -140,6 +172,10 @@ src/
 			model.rs
 			mode.rs
 			cache.rs
+config/
+	quality-thresholds.toml
+scripts/
+	quality-gate.sh
 ```
 
 ## Development
@@ -147,7 +183,41 @@ src/
 ```bash
 cargo check
 cargo run
+cargo package
+cargo publish --dry-run
 ```
+
+## Quality Gate
+
+Run the same quality gate locally as CI:
+
+```bash
+scripts/quality-gate.sh
+```
+
+Threshold registry:
+
+- `config/quality-thresholds.toml`
+
+## Release Readiness Gate
+
+Run deterministic release/documentation readiness checks:
+
+```bash
+scripts/release-gate.sh
+```
+
+Outputs:
+
+- `artifacts/release/checksums-<candidate-id>.txt`
+- `artifacts/release/release-summary-<candidate-id>.md`
+- `artifacts/release/approval-events.log`
+
+Release gate inputs:
+
+- `config/release-policy.toml`
+- `config/docs-sync-checklist.md`
+- Release notes reference path (`RELEASE_NOTES_PATH`, defaults to `docs/README.md`)
 
 ## License
 

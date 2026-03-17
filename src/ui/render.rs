@@ -9,10 +9,13 @@ use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, 
 
 use crate::app::App;
 
-use super::state::{FocusPanel, InputMode, RenameKind, UiState, UiTheme, VisualizerMode};
+use super::state::{
+    FocusPanel, InputMode, PlaylistModalMode, RenameKind, UiState, UiTheme, VisualizerMode,
+};
 
 mod chrome;
 mod lists;
 mod playback;
+mod playlists;
 mod theme;
 mod visualizer;
