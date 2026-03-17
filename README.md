@@ -119,7 +119,7 @@ Tag editor:
 - `Alt+1`: visualizer `Demo Bars` (lightweight example)
 - `Alt+2`: visualizer `Clock`
 - `Alt+3`: visualizer `CMatrix`
-- `Alt+T`: cycle UI theme (`Neon -> Amber -> Mono -> Forest -> Ocean -> Rose -> Desert -> Ice -> Cyber -> Lava -> Aurora -> Candy -> Prism`)
+- `Alt+T`: cycle UI theme (`Neon -> Forest -> Ocean -> Rose -> Cyber -> Lava -> Aurora -> Candy -> Prism -> Scanline`)
 
 ## Project Structure
 

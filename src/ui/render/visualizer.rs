@@ -197,15 +197,18 @@ impl UiState {
                     let ch = charset[glyph_index] as char;
                     let distance = head - row;
                     let color = if distance == 0 {
-                        Color::White
+                        self.theme_visualizer_matrix_head_color()
                     } else if distance <= 2 {
-                        Color::Rgb(120, 255, 120)
+                        self.theme_visualizer_matrix_trail_color()
                     } else {
-                        Color::Rgb(0, 120, 0)
+                        self.theme_visualizer_matrix_fade_color()
                     };
                     spans.push(Span::styled(ch.to_string(), Style::default().fg(color)));
                 } else if (seed + tick + row * 5 + col * 3) % 37 == 0 {
-                    spans.push(Span::styled(".", Style::default().fg(Color::Rgb(0, 60, 0))));
+                    spans.push(Span::styled(
+                        ".",
+                        Style::default().fg(self.theme_visualizer_matrix_dot_color()),
+                    ));
                 } else {
                     spans.push(Span::raw(" "));
                 }
@@ -315,11 +318,11 @@ impl UiState {
         }
 
         let colors = [
-            self.theme_panel_bg_color(),
-            Color::Rgb(88, 149, 52),
-            Color::Rgb(132, 209, 78),
-            Color::Rgb(10, 12, 10),
-            Color::Rgb(236, 236, 236),
+            self.theme_visualizer_panel_bg_color(),
+            self.theme_creeper_primary_color(),
+            self.theme_creeper_secondary_color(),
+            self.theme_creeper_shadow_color(),
+            self.theme_creeper_glow_color(),
         ];
         let tile_h = TILE.len();
         let tile_w = TILE[0].len() * 2; // double width keeps pixel-ish proportions

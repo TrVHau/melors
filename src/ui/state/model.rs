@@ -33,36 +33,30 @@ pub enum VisualizerMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiTheme {
     Neon,
-    Amber,
-    Mono,
     Forest,
     Ocean,
     Rose,
-    Desert,
-    Ice,
     Cyber,
     Lava,
     Aurora,
     Candy,
     Prism,
+    Scanline,
 }
 
 impl UiTheme {
     pub fn cycle(self) -> Self {
         match self {
-            Self::Neon => Self::Amber,
-            Self::Amber => Self::Mono,
-            Self::Mono => Self::Forest,
+            Self::Neon => Self::Forest,
             Self::Forest => Self::Ocean,
             Self::Ocean => Self::Rose,
-            Self::Rose => Self::Desert,
-            Self::Desert => Self::Ice,
-            Self::Ice => Self::Cyber,
+            Self::Rose => Self::Cyber,
             Self::Cyber => Self::Lava,
             Self::Lava => Self::Aurora,
             Self::Aurora => Self::Candy,
             Self::Candy => Self::Prism,
-            Self::Prism => Self::Neon,
+            Self::Prism => Self::Scanline,
+            Self::Scanline => Self::Neon,
         }
     }
 }
@@ -71,18 +65,15 @@ impl fmt::Display for UiTheme {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Neon => write!(f, "Neon"),
-            Self::Amber => write!(f, "Amber"),
-            Self::Mono => write!(f, "Mono"),
             Self::Forest => write!(f, "Forest"),
             Self::Ocean => write!(f, "Ocean"),
             Self::Rose => write!(f, "Rose"),
-            Self::Desert => write!(f, "Desert"),
-            Self::Ice => write!(f, "Ice"),
             Self::Cyber => write!(f, "Cyber"),
             Self::Lava => write!(f, "Lava"),
             Self::Aurora => write!(f, "Aurora"),
             Self::Candy => write!(f, "Candy"),
             Self::Prism => write!(f, "Prism"),
+            Self::Scanline => write!(f, "Scanline"),
         }
     }
 }

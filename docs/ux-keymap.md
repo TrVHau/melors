@@ -15,7 +15,7 @@ This file documents the keymap currently implemented in `src/ui/input/*`.
 - `Alt+1`: visualizer demo bars
 - `Alt+2`: visualizer clock
 - `Alt+3`: visualizer cmatrix
-- `Alt+T`: cycle theme (`Neon -> Amber -> Mono -> Forest -> Ocean -> Rose -> Desert -> Ice -> Cyber -> Lava -> Aurora -> Candy -> Prism`)
+- `Alt+T`: cycle theme (`Neon -> Forest -> Ocean -> Rose -> Cyber -> Lava -> Aurora -> Candy -> Prism -> Scanline`)
 
 ## Normal Mode
 
