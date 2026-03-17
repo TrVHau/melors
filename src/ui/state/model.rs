@@ -10,15 +10,8 @@ pub enum FocusPanel {
 pub enum InputMode {
     Normal,
     Search,
-    Rename,
     EditTag,
     PlaylistModal,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RenameKind {
-    Title,
-    Artist,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,9 +75,6 @@ pub struct UiState {
     pub visualizer_last_update_ms: u128,
     pub cava_cached_levels: Vec<(f32, f32)>,
     pub search_input: String,
-    pub rename_input: String,
-    pub rename_track_id: Option<i64>,
-    pub rename_kind: RenameKind,
     pub edit_tag_track_id: Option<i64>,
     pub edit_tag_inputs: [String; 3],
     pub edit_tag_field: usize,
@@ -131,9 +121,6 @@ impl UiState {
             visualizer_last_update_ms: 0,
             cava_cached_levels: Vec::new(),
             search_input: String::new(),
-            rename_input: String::new(),
-            rename_track_id: None,
-            rename_kind: RenameKind::Title,
             edit_tag_track_id: None,
             edit_tag_inputs: [String::new(), String::new(), String::new()],
             edit_tag_field: 0,

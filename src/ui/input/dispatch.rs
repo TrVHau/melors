@@ -13,7 +13,6 @@ impl UiState {
 
         let should_quit = match self.mode {
             InputMode::Search => self.handle_search_input(app, key)?,
-            InputMode::Rename => self.handle_rename_input(app, key)?,
             InputMode::EditTag => self.handle_edit_tag_input(app, key)?,
             InputMode::PlaylistModal => self.handle_playlist_modal_input(app, key)?,
             InputMode::Normal => self.handle_normal_key(app, key)?,

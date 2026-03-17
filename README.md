@@ -91,9 +91,7 @@ music_dir = "/home/you/Music/melors"
 
 ### Metadata Editing
 
-- `m`: rename selected track title/file
-- `M`: rename selected track artist
-- `t`: open tag editor (title/artist/album)
+- `t`: edit selected track metadata (title/artist/album). Saving will also rename filename using `Artist - Title` (or `Title` when artist is empty).
 
 Tag editor:
 

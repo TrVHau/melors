@@ -137,17 +137,6 @@ impl UiState {
     pub(super) fn draw_statusbar(&self, f: &mut ratatui::Frame<'_>, area: Rect) {
         let text = match self.mode {
             InputMode::Search => format!(" /{}_ ", self.search_input),
-            InputMode::Rename => {
-                let field = match self.rename_kind {
-                    RenameKind::Title => "Title",
-                    RenameKind::Artist => "Artist",
-                };
-                let id = self
-                    .rename_track_id
-                    .map(|id| format!("#{} ", id))
-                    .unwrap_or_default();
-                format!(" Rename {} {}-> {}_ ", field, id, self.rename_input)
-            }
             InputMode::EditTag => {
                 let field_name = ["Title", "Artist", "Album"][self.edit_tag_field];
                 let value = &self.edit_tag_inputs[self.edit_tag_field];
@@ -164,7 +153,7 @@ impl UiState {
                     "[Tab] panel  [Shift+Up/Down] reorder  [x] remove  [Enter] play"
                 }
                 _ => {
-                    "[Tab] panel  [s] search  [l] playlists  [a] queue  [t] edit tags  [Enter] play"
+                    "[Tab] panel  [s] search  [l] playlists  [a] queue  [t] edit metadata  [Enter] play"
                 }
             };
             format!(" {}  |  {}  |  [Alt+T] theme ", self.status, hint)

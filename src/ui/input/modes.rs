@@ -48,50 +48,6 @@ impl UiState {
         Ok(false)
     }
 
-    pub(super) fn handle_rename_input(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
-        match key.code {
-            KeyCode::Esc => {
-                self.exit_rename_mode();
-                self.status = String::from("Rename cancelled");
-            }
-            KeyCode::Enter => {
-                let new_value = self.rename_input.trim().to_string();
-                if let Some(track_id) = self.rename_track_id
-                    && !new_value.is_empty()
-                {
-                    let result = match self.rename_kind {
-                        RenameKind::Title => app.rename_track(track_id, &new_value),
-                        RenameKind::Artist => app.rename_artist(track_id, &new_value),
-                    };
-                    let label = match self.rename_kind {
-                        RenameKind::Title => "title",
-                        RenameKind::Artist => "artist",
-                    };
-                    match result {
-                        Ok(()) => {
-                            self.status =
-                                format!("Renamed {} #{} -> {}", label, track_id, new_value)
-                        }
-                        Err(e) => self.status = format!("Rename failed: {}", e),
-                    }
-                }
-                self.exit_rename_mode();
-            }
-            KeyCode::Backspace => {
-                self.rename_input.pop();
-            }
-            KeyCode::Char(c) => {
-                if !key.modifiers.contains(KeyModifiers::CONTROL)
-                    && !key.modifiers.contains(KeyModifiers::ALT)
-                {
-                    self.rename_input.push(c);
-                }
-            }
-            _ => {}
-        }
-        Ok(false)
-    }
-
     pub(super) fn handle_search_input(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
         match key.code {
             KeyCode::Esc => {

@@ -1,6 +1,20 @@
 use super::*;
 
 impl UiState {
+    fn enter_unified_tag_mode_for_selected_track(&mut self, app: &App) {
+        if let Some(track_id) = self.selected_track_id(app)
+            && let Some(track) = app.track_by_id(track_id)
+        {
+            let title = track.title.clone();
+            let artist = track.artist.clone().unwrap_or_default();
+            let album = track.album.clone().unwrap_or_default();
+            self.enter_edit_tag_mode(track_id, &title, &artist, &album);
+            self.status = String::from(
+                "Edit metadata - Tab: next field, Enter: save (artist/title rename filename), Esc: cancel",
+            );
+        }
+    }
+
     pub(super) fn handle_normal_key(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
         match key.code {
             KeyCode::Char('q') => return Ok(true),
@@ -118,35 +132,8 @@ impl UiState {
                     self.queue_selected = self.queue_selected.min(queue_len.saturating_sub(1));
                 }
             }
-            KeyCode::Char('m') => {
-                if let Some(track_id) = self.selected_track_id(app)
-                    && let Some(track) = app.track_by_id(track_id)
-                {
-                    let current_title = track.title.clone();
-                    self.enter_rename_mode(track_id, &current_title);
-                    self.status = String::from("Rename mode - Enter to confirm, Esc to cancel");
-                }
-            }
-            KeyCode::Char('M') => {
-                if let Some(track_id) = self.selected_track_id(app)
-                    && let Some(track) = app.track_by_id(track_id)
-                {
-                    let current_artist = track.artist.clone().unwrap_or_default();
-                    self.enter_rename_artist_mode(track_id, &current_artist);
-                    self.status = String::from("Rename artist - Enter to confirm, Esc to cancel");
-                }
-            }
-            KeyCode::Char('t') => {
-                if let Some(track_id) = self.selected_track_id(app)
-                    && let Some(track) = app.track_by_id(track_id)
-                {
-                    let title = track.title.clone();
-                    let artist = track.artist.clone().unwrap_or_default();
-                    let album = track.album.clone().unwrap_or_default();
-                    self.enter_edit_tag_mode(track_id, &title, &artist, &album);
-                    self.status =
-                        String::from("Edit tags - Tab: next field, Enter: save, Esc: cancel");
-                }
+            KeyCode::Char('t') | KeyCode::Char('T') => {
+                self.enter_unified_tag_mode_for_selected_track(app);
             }
             _ => {}
         }
