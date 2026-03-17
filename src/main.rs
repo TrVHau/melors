@@ -1,6 +1,7 @@
 mod app;
 mod core;
 mod features;
+mod quality;
 mod services;
 mod ui;
 

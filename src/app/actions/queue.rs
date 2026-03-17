@@ -29,11 +29,9 @@ impl App {
     }
 
     pub fn move_queue_index(&mut self, index: usize, delta: isize) -> Result<Option<usize>> {
-        if index >= self.session.queue.len() {
+        let Some(next) = compute_queue_move_target(self.session.queue.len(), index, delta) else {
             return Ok(None);
-        }
-        let next = (index as isize + delta).clamp(0, self.session.queue.len() as isize - 1);
-        let next = next as usize;
+        };
         if next == index {
             return Ok(Some(index));
         }
@@ -104,5 +102,29 @@ impl App {
         self.storage.replace_queue(&self.session.queue)?;
         self.session.queue_version = self.session.queue_version.saturating_add(1);
         Ok(())
+    }
+}
+
+fn compute_queue_move_target(queue_len: usize, index: usize, delta: isize) -> Option<usize> {
+    if index >= queue_len || queue_len == 0 {
+        return None;
+    }
+    let next = (index as isize + delta).clamp(0, queue_len as isize - 1) as usize;
+    Some(next)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::compute_queue_move_target;
+
+    #[test]
+    fn move_target_clamps_to_bounds() {
+        assert_eq!(compute_queue_move_target(4, 0, -3), Some(0));
+        assert_eq!(compute_queue_move_target(4, 3, 9), Some(3));
+    }
+
+    #[test]
+    fn move_target_returns_none_for_invalid_index() {
+        assert_eq!(compute_queue_move_target(3, 3, 1), None);
     }
 }

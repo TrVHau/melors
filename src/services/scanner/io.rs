@@ -34,14 +34,7 @@ pub(super) fn scan_entries(music_dir: &Path) -> Result<ScanResult> {
 
         match build_track_input(canonical) {
             Ok(input) => upserts.push(input),
-            Err(err) => {
-                warnings.failed_files = warnings.failed_files.saturating_add(1);
-                if warnings.failed_paths_sample.len() < 5 {
-                    warnings
-                        .failed_paths_sample
-                        .push(format!("{}: {}", path_text, err));
-                }
-            }
+            Err(err) => record_warning(&mut warnings, &path_text, &err),
         }
     }
 
@@ -79,6 +72,15 @@ fn build_track_input(path: PathBuf) -> std::result::Result<TrackInput, String> {
     })
 }
 
+fn record_warning(warnings: &mut ScanWarningAggregate, path_text: &str, err: &str) {
+    warnings.failed_files = warnings.failed_files.saturating_add(1);
+    if warnings.failed_paths_sample.len() < 5 {
+        warnings
+            .failed_paths_sample
+            .push(format!("{}: {}", path_text, err));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -105,5 +107,19 @@ mod tests {
         assert!(!input.title.is_empty());
 
         let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn warning_samples_are_bounded_but_count_keeps_growing() {
+        let mut warnings = ScanWarningAggregate::default();
+        for idx in 0..8 {
+            record_warning(
+                &mut warnings,
+                &format!("/tmp/failure-{idx}.mp3"),
+                "metadata read failed",
+            );
+        }
+        assert_eq!(warnings.failed_files, 8);
+        assert_eq!(warnings.failed_paths_sample.len(), 5);
     }
 }

@@ -117,6 +117,7 @@ src/
 			mod.rs
 			io.rs
 			validate.rs
+			watcher.rs
 		storage/
 			mod.rs
 			migrations.rs
@@ -124,6 +125,11 @@ src/
 			playback.rs
 			queue.rs
 		metadata.rs
+	quality/
+		mod.rs
+		thresholds.rs
+		evaluator.rs
+		diagnostics.rs
 	ui/
 		input/
 			dispatch.rs
@@ -140,6 +146,10 @@ src/
 			model.rs
 			mode.rs
 			cache.rs
+config/
+	quality-thresholds.toml
+scripts/
+	quality-gate.sh
 ```
 
 ## Development
@@ -148,6 +158,17 @@ src/
 cargo check
 cargo run
 ```
+
+## Quality Gate
+
+Run the same quality gate locally as CI:
+
+```bash
+scripts/quality-gate.sh
+```
+
+Threshold registry:
+- `config/quality-thresholds.toml`
 
 ## License
 

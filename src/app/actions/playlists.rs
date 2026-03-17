@@ -373,6 +373,27 @@ mod tests {
     }
 
     #[test]
+    fn resolve_playable_track_id_honors_selected_index_start_point() {
+        let items = vec![
+            PlaylistItem {
+                track_id: Some(1),
+                original_path: Some(String::from("/tmp/1.mp3")),
+                is_missing: false,
+                order_index: 0,
+            },
+            PlaylistItem {
+                track_id: Some(2),
+                original_path: Some(String::from("/tmp/2.mp3")),
+                is_missing: false,
+                order_index: 1,
+            },
+        ];
+
+        let id = resolve_playable_track_id(&items, 1, |_track_id| true);
+        assert_eq!(id, Some(2));
+    }
+
+    #[test]
     fn status_mapping_for_no_playable_item_is_deterministic() {
         let result = PlaylistActionResult::NoPlayableItem { playlist_id: 1 };
         let status = result.status_message();

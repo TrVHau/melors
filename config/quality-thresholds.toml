@@ -1,0 +1,13 @@
+version = "2026-03"
+
+[[metrics]]
+name = "quality_gate_runtime_ms"
+baseline = 300000.0
+tolerance_percent = 5.0
+direction = "max"
+
+[[metrics]]
+name = "scan_apply_ops_per_sec"
+baseline = 100.0
+tolerance_percent = 10.0
+direction = "min"

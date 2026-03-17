@@ -212,4 +212,21 @@ mod tests {
         assert_eq!(b1.generation, 1);
         assert_eq!(b2.generation, 2);
     }
+
+    #[test]
+    fn detect_changed_paths_captures_creates_updates_and_deletes() {
+        let mut previous = HashMap::new();
+        previous.insert(String::from("/tmp/a.mp3"), 1);
+        previous.insert(String::from("/tmp/b.mp3"), 2);
+
+        let mut current = HashMap::new();
+        current.insert(String::from("/tmp/a.mp3"), 3);
+        current.insert(String::from("/tmp/c.mp3"), 1);
+
+        let changed = detect_changed_paths(&previous, &current);
+        assert!(changed.contains("/tmp/a.mp3"), "updated path detected");
+        assert!(changed.contains("/tmp/b.mp3"), "deleted path detected");
+        assert!(changed.contains("/tmp/c.mp3"), "new path detected");
+        assert_eq!(changed.len(), 3);
+    }
 }
