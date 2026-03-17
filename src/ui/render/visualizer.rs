@@ -17,15 +17,16 @@ impl UiState {
 
     pub(super) fn draw_off_visualizer(&self, f: &mut ratatui::Frame<'_>, area: Rect) {
         let lines = self.centered_creeper_lines(area);
+        let panel_bg = self.theme_visualizer_panel_bg_color();
         let paragraph = Paragraph::new(lines)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .title(" Visualizer [Off] ")
-                    .style(Style::default().bg(self.theme_panel_bg_color()))
+                    .style(Style::default().bg(panel_bg))
                     .border_style(Style::default().fg(self.theme_dim_color())),
             )
-            .style(Style::default().bg(self.theme_panel_bg_color()));
+            .style(Style::default().bg(panel_bg));
         f.render_widget(paragraph, area);
     }
 
@@ -76,6 +77,7 @@ impl UiState {
         }
 
         let active_height = height.saturating_sub(1).max(1);
+        let panel_bg = self.theme_visualizer_panel_bg_color();
 
         let mut lines = Vec::with_capacity(height);
         for row in (0..active_height).rev() {
@@ -97,14 +99,14 @@ impl UiState {
 
             lines.push(Line::from(vec![Span::styled(
                 row_text,
-                Style::default().fg(Color::Rgb(236, 236, 245)),
+                Style::default().fg(self.theme_visualizer_primary_color()),
             )]));
         }
 
         let baseline = "-  ".repeat(bars);
         lines.push(Line::from(vec![Span::styled(
             baseline,
-            Style::default().fg(Color::Rgb(150, 150, 170)),
+            Style::default().fg(self.theme_visualizer_secondary_color()),
         )]));
 
         let paragraph = Paragraph::new(lines)
@@ -112,10 +114,10 @@ impl UiState {
                 Block::default()
                     .borders(Borders::ALL)
                     .title(" Visualizer [Demo Bars] ")
-                    .style(Style::default().bg(self.theme_panel_bg_color()))
+                    .style(Style::default().bg(panel_bg))
                     .border_style(Style::default().fg(self.theme_dim_color())),
             )
-            .style(Style::default().bg(self.theme_panel_bg_color()));
+            .style(Style::default().bg(panel_bg));
         f.render_widget(paragraph, area);
     }
 
@@ -123,6 +125,7 @@ impl UiState {
         let now = Local::now();
         let inner = self.visualizer_inner(area);
         let available_rows = inner.height.max(1) as usize;
+        let panel_bg = self.theme_visualizer_panel_bg_color();
 
         let mut clock_rows = self.big_clock_lines(&now.format("%H:%M:%S").to_string());
         if clock_rows.len() > available_rows {
@@ -135,13 +138,17 @@ impl UiState {
             lines.push(self.centered_line(
                 area.width,
                 &now.format("%A %Y-%m-%d").to_string(),
-                Color::Rgb(245, 185, 175),
+                self.theme_visualizer_clock_date_color(),
             ));
             lines.push(Line::default());
         }
 
         for line in clock_rows {
-            lines.push(self.centered_line(area.width, &line, Color::Rgb(244, 184, 180)));
+            lines.push(self.centered_line(
+                area.width,
+                &line,
+                self.theme_visualizer_clock_time_color(),
+            ));
         }
 
         while lines.len() < available_rows {
@@ -153,10 +160,10 @@ impl UiState {
                 Block::default()
                     .borders(Borders::ALL)
                     .title(" Visualizer [Clock] ")
-                    .style(Style::default().bg(self.theme_panel_bg_color()))
+                    .style(Style::default().bg(panel_bg))
                     .border_style(Style::default().fg(self.theme_dim_color())),
             )
-            .style(Style::default().bg(self.theme_panel_bg_color()));
+            .style(Style::default().bg(panel_bg));
         f.render_widget(paragraph, area);
     }
 
@@ -173,6 +180,7 @@ impl UiState {
         let position = app.playback_state().position_secs.max(0) as usize;
         let charset = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         let seed = self.cached_track_seed(app) as usize;
+        let panel_bg = self.theme_visualizer_panel_bg_color();
 
         let mut lines = Vec::with_capacity(height);
         for row in 0..height {
@@ -210,10 +218,10 @@ impl UiState {
                 Block::default()
                     .borders(Borders::ALL)
                     .title(" Visualizer [CMatrix] ")
-                    .style(Style::default().bg(self.theme_panel_bg_color()))
+                    .style(Style::default().bg(panel_bg))
                     .border_style(Style::default().fg(self.theme_dim_color())),
             )
-            .style(Style::default().bg(self.theme_panel_bg_color()));
+            .style(Style::default().bg(panel_bg));
         f.render_widget(paragraph, area);
     }
 
@@ -335,7 +343,7 @@ impl UiState {
                     let color_idx = TILE[ly][lx] as usize;
                     Style::default().bg(colors[color_idx])
                 } else {
-                    Style::default().bg(self.theme_panel_bg_color())
+                    Style::default().bg(self.theme_visualizer_panel_bg_color())
                 };
 
                 if x == 0 {

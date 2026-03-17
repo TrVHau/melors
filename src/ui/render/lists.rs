@@ -35,11 +35,7 @@ impl UiState {
             } else {
                 Style::default().fg(self.theme_dim_color())
             })
-            .style(Style::default().bg(if is_active {
-                self.theme_panel_alt_bg_color()
-            } else {
-                self.theme_panel_bg_color()
-            }));
+            .style(Style::default().bg(self.theme_library_panel_bg_color(is_active)));
 
         let current_id = app.playback_state().current_track_id;
         let rows: Vec<String> = self.library_rows_for_width(app, content_width).to_vec();
@@ -65,11 +61,7 @@ impl UiState {
 
         let list = List::new(items)
             .block(block)
-            .style(Style::default().bg(if is_active {
-                self.theme_panel_alt_bg_color()
-            } else {
-                self.theme_panel_bg_color()
-            }))
+            .style(Style::default().bg(self.theme_library_panel_bg_color(is_active)))
             .highlight_style(
                 Style::default()
                     .bg(self.theme_library_color())

@@ -17,7 +17,9 @@ pub enum InputMode {
 pub enum PlaylistModalMode {
     BrowsePlaylists,
     BrowseItems,
+    CreatePlaylist,
     RenamePlaylist,
+    ConfirmDeletePlaylist,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,6 +40,11 @@ pub enum UiTheme {
     Rose,
     Desert,
     Ice,
+    Cyber,
+    Lava,
+    Aurora,
+    Candy,
+    Prism,
 }
 
 impl UiTheme {
@@ -50,7 +57,12 @@ impl UiTheme {
             Self::Ocean => Self::Rose,
             Self::Rose => Self::Desert,
             Self::Desert => Self::Ice,
-            Self::Ice => Self::Neon,
+            Self::Ice => Self::Cyber,
+            Self::Cyber => Self::Lava,
+            Self::Lava => Self::Aurora,
+            Self::Aurora => Self::Candy,
+            Self::Candy => Self::Prism,
+            Self::Prism => Self::Neon,
         }
     }
 }
@@ -66,6 +78,11 @@ impl fmt::Display for UiTheme {
             Self::Rose => write!(f, "Rose"),
             Self::Desert => write!(f, "Desert"),
             Self::Ice => write!(f, "Ice"),
+            Self::Cyber => write!(f, "Cyber"),
+            Self::Lava => write!(f, "Lava"),
+            Self::Aurora => write!(f, "Aurora"),
+            Self::Candy => write!(f, "Candy"),
+            Self::Prism => write!(f, "Prism"),
         }
     }
 }

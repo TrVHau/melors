@@ -6,7 +6,7 @@ Keyboard-first terminal MP3 player written in Rust.
 
 - Local-only MP3 library scanning
 - Fast keyboard workflow (no mouse)
-- Search + queue + now playing panels
+- Search + playlists + now playing + visualizer layout
 - Persistent playback state and queue
 - Theme presets and visualizer modes
 - Tag editing (title/artist/album) from TUI
@@ -98,17 +98,18 @@ Tag editor:
 
 ### Playlist Quick Flow
 
-1. Press `l` to open playlist modal.
-   Playlist appears inline in the right pane (replacing Queue), not as popup.
+1. Press `l` to open playlist mode.
+   Playlist appears inline in the left pane, replacing Library while keeping Now Playing and Visualizer visible.
    On narrow terminals, playlist view auto-switches to stacked mode for better readability.
 2. Use `Up/Down` to choose playlist or item.
-3. Press `Enter` on a playlist to open it; press `Enter` on `+ New playlist` to create a new one.
-4. Press `a` in Library to open playlist picker, then `Enter` on a playlist (or `+ New playlist`) to add the track.
+3. Press `Enter` on a playlist to open it; press `Enter` on `+ New playlist` to name it first, then press `Enter` again to create it.
+4. Press `a` in Library to open playlist picker, then `Enter` on a playlist to add the track. If you choose `+ New playlist`, melors asks for the playlist name first.
 5. Press `d` in items view to remove the selected track from that playlist.
 6. Press `r` in playlists view to rename the selected playlist, then `Enter` to save.
-7. Press `Esc` in items view to go back to playlists; press `Esc` again to close.
-8. Press `Enter` in items view to play.
-9. Once a playlist is opened for playback, it becomes the current `Up Next` list in the main UI.
+7. Press `x` in playlists view to open a delete confirmation, then `Enter` or `x` again to confirm.
+8. Press `Esc` in items view to go back to playlists; press `Esc` again to close.
+9. Press `Enter` in items view to play.
+10. Once a playlist is opened for playback, it becomes the current `Up Next` list in the main UI.
 
 ### Playback Modes and Visualizer
 
@@ -118,7 +119,7 @@ Tag editor:
 - `Alt+1`: visualizer `Demo Bars` (lightweight example)
 - `Alt+2`: visualizer `Clock`
 - `Alt+3`: visualizer `CMatrix`
-- `Alt+T`: cycle UI theme (`Neon -> Amber -> Mono -> Forest -> Ocean -> Rose -> Desert -> Ice`)
+- `Alt+T`: cycle UI theme (`Neon -> Amber -> Mono -> Forest -> Ocean -> Rose -> Desert -> Ice -> Cyber -> Lava -> Aurora -> Candy -> Prism`)
 
 ## Project Structure
 
@@ -159,13 +160,6 @@ src/
 			playback.rs
 			queue.rs
 		metadata.rs
-	quality/
-		mod.rs
-		thresholds.rs
-		evaluator.rs
-		diagnostics.rs
-	release/
-		mod.rs
 	ui/
 		input/
 			dispatch.rs
@@ -182,10 +176,6 @@ src/
 			model.rs
 			mode.rs
 			cache.rs
-config/
-	quality-thresholds.toml
-scripts/
-	quality-gate.sh
 ```
 
 ## Development
@@ -197,27 +187,10 @@ cargo package
 cargo publish --dry-run
 ```
 
-## Quality Gate
+## Notes
 
-Run the same quality gate locally as CI:
-
-```bash
-scripts/quality-gate.sh
-```
-
-Threshold registry:
-
-- `config/quality-thresholds.toml`
-
-## Release Readiness Gate
-
-Run deterministic release/documentation readiness checks:
-
-```bash
-scripts/release-gate.sh
-```
-
-Outputs:
+- Visualizer `Alt+1` is currently a deterministic demo-bars mode, not FFT-driven spectrum analysis.
+- Playlist items support play and remove; adding always starts from Library with `a`.
 
 - `artifacts/release/checksums-<candidate-id>.txt`
 - `artifacts/release/release-summary-<candidate-id>.md`

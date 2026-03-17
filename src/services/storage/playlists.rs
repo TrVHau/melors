@@ -1,12 +1,9 @@
-#![allow(dead_code)]
-
 use super::*;
 
 #[derive(Debug, Clone)]
 pub struct Playlist {
     pub id: i64,
     pub name: String,
-    pub created_at: String,
 }
 
 #[derive(Debug, Clone)]
@@ -62,13 +59,12 @@ impl Storage {
 
     pub fn list_playlists(&self) -> Result<Vec<Playlist>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, name, created_at FROM playlists ORDER BY name COLLATE NOCASE ASC",
+            "SELECT id, name FROM playlists ORDER BY name COLLATE NOCASE ASC",
         )?;
         let rows = stmt.query_map([], |row| {
             Ok(Playlist {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                created_at: row.get(2)?,
             })
         })?;
 
@@ -128,66 +124,6 @@ impl Storage {
         Ok(())
     }
 
-    pub fn move_playlist_item(
-        &mut self,
-        playlist_id: i64,
-        from_index: i64,
-        delta: isize,
-    ) -> Result<i64> {
-        let tx = self.conn.transaction()?;
-        ensure_playlist_exists_tx(&tx, playlist_id)?;
-
-        let count: i64 = tx.query_row(
-            "SELECT COUNT(*) FROM playlist_items WHERE playlist_id=?1",
-            params![playlist_id],
-            |row| row.get(0),
-        )?;
-        if count == 0 {
-            return Err(anyhow::anyhow!("playlist has no items"));
-        }
-        if from_index < 0 || from_index >= count {
-            return Err(anyhow::anyhow!("source index out of bounds"));
-        }
-
-        let to_index = (from_index + delta as i64).clamp(0, count - 1);
-        if to_index == from_index {
-            tx.commit()?;
-            return Ok(to_index);
-        }
-
-        let row_id: i64 = tx
-            .query_row(
-                "SELECT rowid FROM playlist_items WHERE playlist_id=?1 AND order_index=?2 LIMIT 1",
-                params![playlist_id, from_index],
-                |row| row.get(0),
-            )
-            .optional()?
-            .ok_or_else(|| anyhow::anyhow!("playlist item not found"))?;
-
-        if to_index > from_index {
-            tx.execute(
-                "UPDATE playlist_items
-                 SET order_index = order_index - 1
-                 WHERE playlist_id=?1 AND order_index > ?2 AND order_index <= ?3",
-                params![playlist_id, from_index, to_index],
-            )?;
-        } else {
-            tx.execute(
-                "UPDATE playlist_items
-                 SET order_index = order_index + 1
-                 WHERE playlist_id=?1 AND order_index >= ?2 AND order_index < ?3",
-                params![playlist_id, to_index, from_index],
-            )?;
-        }
-
-        tx.execute(
-            "UPDATE playlist_items SET order_index=?1 WHERE rowid=?2",
-            params![to_index, row_id],
-        )?;
-        tx.commit()?;
-        Ok(to_index)
-    }
-
     pub fn load_playlist_items(&self, playlist_id: i64) -> Result<Vec<PlaylistItem>> {
         let mut stmt = self.conn.prepare(
             "SELECT track_id, original_path, is_missing, order_index
@@ -212,7 +148,6 @@ impl Storage {
     }
 }
 
-#[allow(dead_code)]
 fn normalize_playlist_name(name: &str) -> Result<String> {
     let normalized = name.trim();
     if normalized.is_empty() {
@@ -221,7 +156,6 @@ fn normalize_playlist_name(name: &str) -> Result<String> {
     Ok(normalized.to_string())
 }
 
-#[allow(dead_code)]
 fn playlist_name_exists(conn: &Connection, name: &str, exclude_id: Option<i64>) -> Result<bool> {
     let exists = match exclude_id {
         Some(id) => conn
@@ -244,7 +178,6 @@ fn playlist_name_exists(conn: &Connection, name: &str, exclude_id: Option<i64>) 
     Ok(exists)
 }
 
-#[allow(dead_code)]
 fn ensure_playlist_exists_tx(tx: &rusqlite::Transaction<'_>, playlist_id: i64) -> Result<()> {
     let exists = tx
         .query_row(
@@ -318,37 +251,6 @@ mod tests {
     }
 
     #[test]
-    fn move_playlist_item_clamps_and_keeps_contiguous_order() {
-        let db_path = temp_db_path();
-        let mut storage = Storage::open(&db_path).expect("open storage");
-        seed_tracks(&mut storage);
-        let playlist_id = storage.create_playlist("Queue").expect("create playlist");
-        let tracks = storage.load_tracks().expect("load tracks");
-
-        storage
-            .add_playlist_item(playlist_id, tracks[0].id)
-            .expect("add 1");
-        storage
-            .add_playlist_item(playlist_id, tracks[1].id)
-            .expect("add 2");
-
-        let moved = storage
-            .move_playlist_item(playlist_id, 0, 999)
-            .expect("move");
-        assert_eq!(moved, 1);
-
-        let items = storage
-            .load_playlist_items(playlist_id)
-            .expect("load items");
-        assert_eq!(items.len(), 2);
-        assert_eq!(items[0].order_index, 0);
-        assert_eq!(items[1].order_index, 1);
-
-        drop(storage);
-        cleanup_db(&db_path);
-    }
-
-    #[test]
     fn failed_playlist_mutation_rolls_back_changes() {
         let db_path = temp_db_path();
         let mut storage = Storage::open(&db_path).expect("open storage");
@@ -369,6 +271,28 @@ mod tests {
             .expect("load items");
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].order_index, 0);
+
+        drop(storage);
+        cleanup_db(&db_path);
+    }
+
+    #[test]
+    fn delete_playlist_removes_playlist_and_items() {
+        let db_path = temp_db_path();
+        let mut storage = Storage::open(&db_path).expect("open storage");
+        seed_tracks(&mut storage);
+        let playlist_id = storage.create_playlist("Trash").expect("create playlist");
+        let track_id = storage.load_tracks().expect("load tracks")[0].id;
+        storage
+            .add_playlist_item(playlist_id, track_id)
+            .expect("seed item");
+
+        storage.delete_playlist(playlist_id).expect("delete playlist");
+
+        let playlists = storage.list_playlists().expect("list playlists");
+        assert!(playlists.into_iter().all(|playlist| playlist.id != playlist_id));
+        let items = storage.load_playlist_items(playlist_id).expect("load items after delete");
+        assert!(items.is_empty());
 
         drop(storage);
         cleanup_db(&db_path);

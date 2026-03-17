@@ -21,6 +21,7 @@ impl UiState {
         self.playlist_modal_visible = true;
         self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
         self.playlist_item_selected = 0;
+        self.playlist_rename_input.clear();
         self.playlist_add_track_id = None;
     }
 
@@ -29,6 +30,7 @@ impl UiState {
         self.playlist_modal_visible = false;
         self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
         self.playlist_item_selected = 0;
+        self.playlist_rename_input.clear();
         self.playlist_add_track_id = None;
     }
 
@@ -46,6 +48,18 @@ impl UiState {
 
     pub fn selected_playlist_item_index(&self) -> usize {
         self.playlist_item_selected
+    }
+
+    pub fn track_label_by_id(&self, app: &App, track_id: i64) -> String {
+        app.track_by_id(track_id)
+            .map(|track| {
+                format!(
+                    "{} - {}",
+                    track.artist.as_deref().unwrap_or("Unknown Artist"),
+                    track.title
+                )
+            })
+            .unwrap_or_else(|| format!("#{}", track_id))
     }
 
     pub fn move_playlist_selection(&mut self, app: &App, delta: isize) -> Result<()> {

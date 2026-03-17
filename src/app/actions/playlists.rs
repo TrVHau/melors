@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use super::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -36,11 +34,6 @@ pub enum PlaylistActionResult {
     PlaylistItemRemoved {
         playlist_id: i64,
         order_index: i64,
-    },
-    PlaylistItemMoved {
-        playlist_id: i64,
-        from_index: i64,
-        to_index: i64,
     },
     PlaybackStarted {
         playlist_id: i64,
@@ -90,11 +83,6 @@ impl PlaylistActionResult {
                 level: ActionStatusLevel::Info,
                 code: "playlist.item_removed",
                 text: String::from("Track removed from playlist"),
-            },
-            Self::PlaylistItemMoved { to_index, .. } => ActionStatusMessage {
-                level: ActionStatusLevel::Info,
-                code: "playlist.item_moved",
-                text: format!("Playlist item moved to #{}", to_index + 1),
             },
             Self::PlaybackStarted { .. } => ActionStatusMessage {
                 level: ActionStatusLevel::Info,
@@ -212,30 +200,6 @@ impl App {
                 }
             }
             Err(err) => classify_storage_error("remove_playlist_item", err),
-        }
-    }
-
-    pub fn move_playlist_item_action(
-        &mut self,
-        playlist_id: i64,
-        from_index: i64,
-        delta: isize,
-    ) -> PlaylistActionResult {
-        match self
-            .storage
-            .move_playlist_item(playlist_id, from_index, delta)
-        {
-            Ok(to_index) => {
-                if let Err(err) = self.sync_active_playlist_queue_if_needed(playlist_id) {
-                    return classify_storage_error("move_playlist_item", err);
-                }
-                PlaylistActionResult::PlaylistItemMoved {
-                    playlist_id,
-                    from_index,
-                    to_index,
-                }
-            }
-            Err(err) => classify_storage_error("move_playlist_item", err),
         }
     }
 

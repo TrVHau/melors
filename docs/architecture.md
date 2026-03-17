@@ -125,19 +125,19 @@ The app runs on a mostly **single-threaded** event loop.
 
 ### `playback_state`
 
-| Column             | Type    | Notes                          |
-| ------------------ | ------- | ------------------------------ |
-| `current_track_id` | INTEGER | nullable FK                    |
-| `position_secs`    | INTEGER |                                |
-| `shuffle_enabled`  | INTEGER | 0 / 1                          |
+| Column             | Type    | Notes                           |
+| ------------------ | ------- | ------------------------------- |
+| `current_track_id` | INTEGER | nullable FK                     |
+| `position_secs`    | INTEGER |                                 |
+| `shuffle_enabled`  | INTEGER | 0 / 1                           |
 | `repeat_mode`      | INTEGER | 0=Off, 1=RepeatOne, 2=RepeatAll |
-| `updated_at`       | TEXT    | ISO timestamp                  |
+| `updated_at`       | TEXT    | ISO timestamp                   |
 
 ## Caching Strategy
 
-`UiState` maintains two render caches (Library and Queue) keyed by version counters
-(`tracks_version`, `queue_version`) that increment on every mutation. A cache hit
-skips all row formatting and track iteration for that frame.
+`UiState` maintains render caches for the Library view keyed by version counters
+such as `tracks_version`. A cache hit skips row formatting and track iteration
+for that frame.
 
 Playback state writes are debounced: dirty writes are held for 250 ms and skipped
 entirely if the value is unchanged from the last persisted snapshot.
@@ -146,11 +146,11 @@ entirely if the value is unchanged from the last persisted snapshot.
 
 Three modes are rendered natively in ratatui — no external processes:
 
-| Mode    | Key     | Technique                                               |
-| ------- | ------- | ------------------------------------------------------- |
-| Cava    | `Alt+1` | Real FFT (rustfft) on PCM frames; exponential smoothing |
-| Clock   | `Alt+2` | 5-row block-glyph time display with date header         |
-| CMatrix | `Alt+3` | Deterministic character rain seeded from track ID       |
+| Mode    | Key     | Technique                                          |
+| ------- | ------- | -------------------------------------------------- |
+| Cava    | `Alt+1` | Deterministic demo bars with cached lane smoothing |
+| Clock   | `Alt+2` | 5-row block-glyph time display with date header    |
+| CMatrix | `Alt+3` | Deterministic character rain seeded from track ID  |
 
 - `queue`: queue operations and ordering modes
 - `search`: fuzzy search index and query execution

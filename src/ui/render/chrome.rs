@@ -1,6 +1,14 @@
 use super::*;
 
 impl UiState {
+    fn draw_primary_panel(&mut self, f: &mut ratatui::Frame<'_>, area: Rect, app: &App) {
+        if self.mode == InputMode::PlaylistModal {
+            self.draw_playlist_modal(f, area, app);
+        } else {
+            self.draw_library(f, area, app);
+        }
+    }
+
     pub fn draw(&mut self, f: &mut ratatui::Frame<'_>, app: &App) {
         let area = f.area();
         let tiny = area.width < 90 || area.height < 24;
@@ -38,11 +46,7 @@ impl UiState {
             .constraints([Constraint::Percentage(62), Constraint::Percentage(38)])
             .split(area);
 
-        if self.mode == InputMode::PlaylistModal {
-            self.draw_playlist_modal(f, rows[0], app);
-        } else {
-            self.draw_library(f, rows[0], app);
-        }
+        self.draw_primary_panel(f, rows[0], app);
         self.draw_now_playing(f, rows[1], app);
     }
 
@@ -57,11 +61,7 @@ impl UiState {
             .constraints([Constraint::Percentage(62), Constraint::Percentage(38)])
             .split(rows[0]);
 
-        if self.mode == InputMode::PlaylistModal {
-            self.draw_playlist_modal(f, top[0], app);
-        } else {
-            self.draw_library(f, top[0], app);
-        }
+        self.draw_primary_panel(f, top[0], app);
         self.draw_now_playing(f, top[1], app);
 
         if self.mode == InputMode::PlaylistModal {
@@ -92,11 +92,7 @@ impl UiState {
             .constraints([Constraint::Percentage(64), Constraint::Percentage(36)])
             .split(rows[0]);
 
-        if self.mode == InputMode::PlaylistModal {
-            self.draw_playlist_modal(f, top[0], app);
-        } else {
-            self.draw_library(f, top[0], app);
-        }
+        self.draw_primary_panel(f, top[0], app);
         self.draw_now_playing(f, top[1], app);
 
         let bottom = Layout::default()

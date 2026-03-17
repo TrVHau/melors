@@ -15,7 +15,7 @@ This file documents the keymap currently implemented in `src/ui/input/*`.
 - `Alt+1`: visualizer demo bars
 - `Alt+2`: visualizer clock
 - `Alt+3`: visualizer cmatrix
-- `Alt+T`: cycle theme (`Neon -> Amber -> Mono -> Forest -> Ocean -> Rose -> Desert -> Ice`)
+- `Alt+T`: cycle theme (`Neon -> Amber -> Mono -> Forest -> Ocean -> Rose -> Desert -> Ice -> Cyber -> Lava -> Aurora -> Candy -> Prism`)
 
 ## Normal Mode
 
@@ -42,7 +42,7 @@ This file documents the keymap currently implemented in `src/ui/input/*`.
 - `l`: open playlist modal
 - `r`: rescan library
 - `f`: toggle favorite
-- `a`: quick add selected/current track into playlist
+- `a`: open playlist picker for selected/current track
 - `t` or `T`: enter tag editor
 
 ## Search Mode
@@ -63,19 +63,22 @@ This file documents the keymap currently implemented in `src/ui/input/*`.
 
 ## Playlist Modal
 
-Only four controls are used inside playlist mode:
+Playlist mode uses a short control set:
 
 - `Up` / `Down`: move selection
-- `Enter`: open selected playlist, play selected item, or create a new playlist from the `+ New playlist` row
+- `Enter`: open selected playlist, play selected item, or start naming a new playlist from the `+ New playlist` row
 - `a` (from Library/Normal mode): opens playlist picker to choose target playlist for the selected/current track
 - `d`: remove selected item from the opened playlist
 - `r`: rename selected playlist (from playlist list)
+- `x`: open delete confirmation for selected playlist (from playlist list)
 - `Esc`: go back from items to playlists, or close the playlist modal from playlist list
 
 ## Notes
 
 - The old rename mode (`m`, `M`) is no longer active; metadata editing is done via `t`/`T` only.
 - Playlist naming defaults to automatic (`Playlist 1`, `Playlist 2`, ...) and can be changed with `r`.
+- Creating a playlist always asks for the name first; the default suggestion can be edited before pressing `Enter`.
 - In playlist items view, modification is remove-only (`d`); adding is initiated from Library with `a`.
+- Playlist deletion is available from playlist list with `x`, followed by explicit confirmation.
 - Opening or playing a playlist makes that playlist become the current `Up Next` source.
 - Status and header text are intentionally minimal; the UI no longer repeats full key hints on every screen.
