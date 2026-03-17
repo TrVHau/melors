@@ -2,6 +2,236 @@ use super::*;
 use crate::ui::state::PlaylistModalMode;
 
 impl UiState {
+    fn accepts_plain_text(key: KeyEvent) -> bool {
+        !key.modifiers.contains(KeyModifiers::CONTROL) && !key.modifiers.contains(KeyModifiers::ALT)
+    }
+
+    fn create_playlist_with_name(&mut self, app: &mut App, name: &str) -> Result<Option<i64>> {
+        let msg = app.create_playlist_action(name).status_message();
+        self.status = msg.text;
+        if msg.code != "playlist.created" {
+            return Ok(None);
+        }
+
+        let playlists = app.list_playlists_action()?;
+        if playlists.is_empty() {
+            self.status = String::from("Create playlist failed");
+            return Ok(None);
+        }
+        self.playlist_selected = playlists.len() - 1;
+        Ok(playlists.last().map(|p| p.id))
+    }
+
+    fn default_playlist_name(&self, app: &App) -> Result<String> {
+        Ok(format!("Playlist {}", app.list_playlists_action()?.len() + 1))
+    }
+
+    pub(super) fn resolve_track_for_playlist_add(&mut self, app: &mut App) -> Option<i64> {
+        let selected_library_track = self.selected_track_id(app);
+        let current_playing_track = app.playback_state().current_track_id;
+        selected_library_track.or(current_playing_track)
+    }
+
+    fn handle_create_playlist_mode(&mut self, app: &mut App, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Esc => {
+                self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
+                self.playlist_rename_input.clear();
+                self.status = String::from("Create playlist cancelled");
+            }
+            KeyCode::Enter => {
+                let requested_name = self.playlist_rename_input.trim().to_string();
+                let Some(playlist_id) = self.create_playlist_with_name(app, &requested_name)? else {
+                    return Ok(());
+                };
+
+                if let Some(track_id) = self.playlist_add_track_id {
+                    let msg = app
+                        .add_playlist_item_action(playlist_id, track_id)
+                        .status_message();
+                    self.status = format!("{} (#{} <- #{})", msg.text, playlist_id, track_id);
+                    self.exit_playlist_modal();
+                } else {
+                    self.playlist_modal_mode = PlaylistModalMode::BrowseItems;
+                    self.playlist_item_selected = 0;
+                    self.playlist_rename_input.clear();
+                }
+            }
+            KeyCode::Backspace => {
+                self.playlist_rename_input.pop();
+            }
+            KeyCode::Char(c) if Self::accepts_plain_text(key) => {
+                self.playlist_rename_input.push(c);
+            }
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    fn handle_rename_playlist_mode(&mut self, app: &mut App, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Esc => {
+                self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
+                self.playlist_rename_input.clear();
+                self.status = String::from("Rename cancelled");
+            }
+            KeyCode::Enter => {
+                let Some(playlist_id) = self.selected_playlist_id(app)? else {
+                    self.status = String::from("No playlist selected");
+                    self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
+                    self.playlist_rename_input.clear();
+                    return Ok(());
+                };
+
+                let msg = app
+                    .rename_playlist_action(playlist_id, &self.playlist_rename_input)
+                    .status_message();
+                self.status = msg.text;
+                self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
+                self.playlist_rename_input.clear();
+            }
+            KeyCode::Backspace => {
+                self.playlist_rename_input.pop();
+            }
+            KeyCode::Char(c) if Self::accepts_plain_text(key) => {
+                self.playlist_rename_input.push(c);
+            }
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    fn handle_delete_playlist_confirmation(
+        &mut self,
+        app: &mut App,
+        key: KeyEvent,
+    ) -> Result<()> {
+        match key.code {
+            KeyCode::Esc => {
+                self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
+                self.status = String::from("Delete cancelled");
+            }
+            KeyCode::Enter | KeyCode::Char('x') => {
+                let Some(playlist_id) = self.selected_playlist_id(app)? else {
+                    self.status = String::from("Select a playlist to delete");
+                    self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
+                    return Ok(());
+                };
+
+                let msg = app.delete_playlist_action(playlist_id).status_message();
+                self.status = msg.text;
+
+                let playlists_len = app.list_playlists_action()?.len();
+                self.playlist_selected = self.playlist_selected.min(playlists_len);
+                self.playlist_item_selected = 0;
+                self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
+            }
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    fn handle_playlist_browse_enter(&mut self, app: &mut App) -> Result<()> {
+        if let Some(track_id) = self.playlist_add_track_id {
+            let playlist_id = if let Some(playlist_id) = self.selected_playlist_id(app)? {
+                playlist_id
+            } else {
+                self.playlist_rename_input = self.default_playlist_name(app)?;
+                self.playlist_modal_mode = PlaylistModalMode::CreatePlaylist;
+                self.status = String::from("Name the new playlist");
+                return Ok(());
+            };
+
+            let msg = app
+                .add_playlist_item_action(playlist_id, track_id)
+                .status_message();
+            self.status = format!("{} (#{} <- #{})", msg.text, playlist_id, track_id);
+            self.exit_playlist_modal();
+            return Ok(());
+        }
+
+        if let Some(playlist_id) = self.selected_playlist_id(app)? {
+            self.playlist_modal_mode = PlaylistModalMode::BrowseItems;
+            self.playlist_item_selected = 0;
+            self.status = format!("Opened playlist #{}", playlist_id);
+        } else {
+            self.playlist_rename_input = self.default_playlist_name(app)?;
+            self.playlist_modal_mode = PlaylistModalMode::CreatePlaylist;
+            self.status = String::from("Name the new playlist");
+        }
+
+        Ok(())
+    }
+
+    fn remove_selected_playlist_item(&mut self, app: &mut App) -> Result<()> {
+        let Some(playlist_id) = self.selected_playlist_id(app)? else {
+            self.status = String::from("No playlist selected");
+            return Ok(());
+        };
+
+        let items = app.list_playlist_items_action(playlist_id)?;
+        if items.is_empty() {
+            self.status = String::from("Playlist is empty");
+            return Ok(());
+        }
+
+        let idx = self.playlist_item_selected.min(items.len() - 1);
+        let order_index = items[idx].order_index;
+        let msg = app
+            .remove_playlist_item_action(playlist_id, order_index)
+            .status_message();
+        self.status = msg.text;
+
+        let remaining = app.list_playlist_items_action(playlist_id)?.len();
+        self.playlist_item_selected = if remaining == 0 {
+            0
+        } else {
+            self.playlist_item_selected.min(remaining - 1)
+        };
+
+        Ok(())
+    }
+
+    fn start_playlist_rename(&mut self, app: &mut App) -> Result<()> {
+        let Some(playlist_id) = self.selected_playlist_id(app)? else {
+            self.status = String::from("Select a playlist to rename");
+            return Ok(());
+        };
+
+        let playlists = app.list_playlists_action()?;
+        if let Some(playlist) = playlists.iter().find(|p| p.id == playlist_id) {
+            self.playlist_rename_input = playlist.name.clone();
+            self.playlist_modal_mode = PlaylistModalMode::RenamePlaylist;
+            self.status = format!("Rename playlist #{}", playlist_id);
+        }
+
+        Ok(())
+    }
+
+    fn request_delete_selected_playlist(&mut self, app: &mut App) -> Result<()> {
+        if self.playlist_add_track_id.is_some() {
+            return Ok(());
+        }
+
+        let Some(playlist_id) = self.selected_playlist_id(app)? else {
+            self.status = String::from("Select a playlist to delete");
+            return Ok(());
+        };
+
+        let playlist_name = app
+            .list_playlists_action()?
+            .into_iter()
+            .find(|playlist| playlist.id == playlist_id)
+            .map(|playlist| playlist.name)
+            .unwrap_or_else(|| format!("#{}", playlist_id));
+        self.playlist_modal_mode = PlaylistModalMode::ConfirmDeletePlaylist;
+        self.status = format!("Delete playlist {}?", playlist_name);
+        Ok(())
+    }
+
     pub(super) fn handle_edit_tag_input(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
         match key.code {
             KeyCode::Esc => {
@@ -37,54 +267,8 @@ impl UiState {
                 self.edit_tag_inputs[self.edit_tag_field].pop();
             }
             KeyCode::Char(c) => {
-                if !key.modifiers.contains(KeyModifiers::CONTROL)
-                    && !key.modifiers.contains(KeyModifiers::ALT)
-                {
+                if Self::accepts_plain_text(key) {
                     self.edit_tag_inputs[self.edit_tag_field].push(c);
-                }
-            }
-            _ => {}
-        }
-        Ok(false)
-    }
-
-    pub(super) fn handle_rename_input(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
-        match key.code {
-            KeyCode::Esc => {
-                self.exit_rename_mode();
-                self.status = String::from("Rename cancelled");
-            }
-            KeyCode::Enter => {
-                let new_value = self.rename_input.trim().to_string();
-                if let Some(track_id) = self.rename_track_id
-                    && !new_value.is_empty()
-                {
-                    let result = match self.rename_kind {
-                        RenameKind::Title => app.rename_track(track_id, &new_value),
-                        RenameKind::Artist => app.rename_artist(track_id, &new_value),
-                    };
-                    let label = match self.rename_kind {
-                        RenameKind::Title => "title",
-                        RenameKind::Artist => "artist",
-                    };
-                    match result {
-                        Ok(()) => {
-                            self.status =
-                                format!("Renamed {} #{} -> {}", label, track_id, new_value)
-                        }
-                        Err(e) => self.status = format!("Rename failed: {}", e),
-                    }
-                }
-                self.exit_rename_mode();
-            }
-            KeyCode::Backspace => {
-                self.rename_input.pop();
-            }
-            KeyCode::Char(c) => {
-                if !key.modifiers.contains(KeyModifiers::CONTROL)
-                    && !key.modifiers.contains(KeyModifiers::ALT)
-                {
-                    self.rename_input.push(c);
                 }
             }
             _ => {}
@@ -111,9 +295,7 @@ impl UiState {
             KeyCode::Down => self.move_selection(app, 1),
             KeyCode::Up => self.move_selection(app, -1),
             KeyCode::Char(c) => {
-                if !key.modifiers.contains(KeyModifiers::CONTROL)
-                    && !key.modifiers.contains(KeyModifiers::ALT)
-                {
+                if Self::accepts_plain_text(key) {
                     self.search_input.push(c);
                     self.library_selected = 0;
                     self.search_warning = Self::search_warning_for_query(&self.search_input);
@@ -129,74 +311,66 @@ impl UiState {
         app: &mut App,
         key: KeyEvent,
     ) -> Result<bool> {
+        if self.playlist_modal_mode == PlaylistModalMode::CreatePlaylist {
+            self.handle_create_playlist_mode(app, key)?;
+            return Ok(false);
+        }
+
+        if self.playlist_modal_mode == PlaylistModalMode::RenamePlaylist {
+            self.handle_rename_playlist_mode(app, key)?;
+            return Ok(false);
+        }
+
+        if self.playlist_modal_mode == PlaylistModalMode::ConfirmDeletePlaylist {
+            self.handle_delete_playlist_confirmation(app, key)?;
+            return Ok(false);
+        }
+
         match key.code {
             KeyCode::Esc => {
-                self.exit_playlist_modal();
-                self.status = String::from("Closed playlist modal");
+                match self.playlist_modal_mode {
+                    PlaylistModalMode::BrowseItems => {
+                        self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
+                        self.playlist_item_selected = 0;
+                        self.status = String::from("Back to playlists");
+                    }
+                    PlaylistModalMode::BrowsePlaylists => {
+                        self.exit_playlist_modal();
+                        self.status = String::from("Closed playlist modal");
+                    }
+                    PlaylistModalMode::CreatePlaylist => unreachable!(),
+                    PlaylistModalMode::RenamePlaylist => unreachable!(),
+                    PlaylistModalMode::ConfirmDeletePlaylist => unreachable!(),
+                }
             }
             KeyCode::Char('l') => {
                 self.exit_playlist_modal();
                 self.status = String::from("Closed playlist modal");
             }
-            KeyCode::Char('b') => {
-                self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
-                self.playlist_item_selected = 0;
-                self.status = String::from("Back to playlists");
-            }
-            KeyCode::Down if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                if self.playlist_modal_mode != PlaylistModalMode::BrowseItems {
-                    return Ok(false);
-                }
-                let Some(playlist_id) = self.selected_playlist_id(app)? else {
-                    return Ok(false);
-                };
-                let from = self.playlist_item_selected as i64;
-                let msg = app
-                    .move_playlist_item_action(playlist_id, from, 1)
-                    .status_message();
-                self.status = msg.text;
-                self.playlist_item_selected = self.playlist_item_selected.saturating_add(1);
-            }
-            KeyCode::Up if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                if self.playlist_modal_mode != PlaylistModalMode::BrowseItems {
-                    return Ok(false);
-                }
-                let Some(playlist_id) = self.selected_playlist_id(app)? else {
-                    return Ok(false);
-                };
-                let from = self.playlist_item_selected as i64;
-                let msg = app
-                    .move_playlist_item_action(playlist_id, from, -1)
-                    .status_message();
-                self.status = msg.text;
-                self.playlist_item_selected = self.playlist_item_selected.saturating_sub(1);
-            }
             KeyCode::Down => {
                 if self.playlist_modal_mode == PlaylistModalMode::BrowsePlaylists {
                     self.move_playlist_selection(app, 1)?;
-                } else {
+                } else if self.playlist_modal_mode == PlaylistModalMode::BrowseItems {
                     self.move_playlist_item_selection(app, 1)?;
                 }
             }
             KeyCode::Up => {
                 if self.playlist_modal_mode == PlaylistModalMode::BrowsePlaylists {
                     self.move_playlist_selection(app, -1)?;
-                } else {
+                } else if self.playlist_modal_mode == PlaylistModalMode::BrowseItems {
                     self.move_playlist_item_selection(app, -1)?;
                 }
             }
             KeyCode::Enter => {
-                let Some(playlist_id) = self.selected_playlist_id(app)? else {
-                    self.status = String::from("No playlist selected");
-                    return Ok(false);
-                };
                 match self.playlist_modal_mode {
                     PlaylistModalMode::BrowsePlaylists => {
-                        self.playlist_modal_mode = PlaylistModalMode::BrowseItems;
-                        self.playlist_item_selected = 0;
-                        self.status = format!("Opened playlist #{}", playlist_id);
+                        self.handle_playlist_browse_enter(app)?;
                     }
                     PlaylistModalMode::BrowseItems => {
+                        let Some(playlist_id) = self.selected_playlist_id(app)? else {
+                            self.status = String::from("No playlist selected");
+                            return Ok(false);
+                        };
                         let result = app.play_from_playlist_action(
                             playlist_id,
                             Some(self.selected_playlist_item_index()),
@@ -204,56 +378,28 @@ impl UiState {
                         let msg = result.status_message();
                         self.status = msg.text;
                     }
+                    PlaylistModalMode::CreatePlaylist => unreachable!(),
+                    PlaylistModalMode::RenamePlaylist => unreachable!(),
+                    PlaylistModalMode::ConfirmDeletePlaylist => unreachable!(),
                 }
-            }
-            KeyCode::Char('c') => {
-                let count = app.list_playlists_action()?.len() + 1;
-                let name = format!("Playlist {}", count);
-                let msg = app.create_playlist_action(&name).status_message();
-                self.status = msg.text;
-            }
-            KeyCode::Char('R') => {
-                let Some(playlist_id) = self.selected_playlist_id(app)? else {
-                    return Ok(false);
-                };
-                let name = format!("Renamed {}", playlist_id);
-                let msg = app
-                    .rename_playlist_action(playlist_id, &name)
-                    .status_message();
-                self.status = msg.text;
             }
             KeyCode::Char('d') => {
-                let Some(playlist_id) = self.selected_playlist_id(app)? else {
-                    return Ok(false);
-                };
-                let msg = app.delete_playlist_action(playlist_id).status_message();
-                self.status = msg.text;
-                self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
-                self.playlist_item_selected = 0;
-            }
-            KeyCode::Char('a') => {
-                let Some(playlist_id) = self.selected_playlist_id(app)? else {
-                    return Ok(false);
-                };
-                if let Some(track_id) = self.selected_track_id(app) {
-                    let msg = app
-                        .add_playlist_item_action(playlist_id, track_id)
-                        .status_message();
-                    self.status = msg.text;
-                }
-            }
-            KeyCode::Char('x') => {
                 if self.playlist_modal_mode != PlaylistModalMode::BrowseItems {
                     return Ok(false);
                 }
-                let Some(playlist_id) = self.selected_playlist_id(app)? else {
+                self.remove_selected_playlist_item(app)?;
+            }
+            KeyCode::Char('r') => {
+                if self.playlist_modal_mode != PlaylistModalMode::BrowsePlaylists {
                     return Ok(false);
-                };
-                let order_index = self.playlist_item_selected as i64;
-                let msg = app
-                    .remove_playlist_item_action(playlist_id, order_index)
-                    .status_message();
-                self.status = msg.text;
+                }
+                self.start_playlist_rename(app)?;
+            }
+            KeyCode::Char('x') => {
+                if self.playlist_modal_mode != PlaylistModalMode::BrowsePlaylists {
+                    return Ok(false);
+                }
+                self.request_delete_selected_playlist(app)?;
             }
             _ => {}
         }

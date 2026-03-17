@@ -1,6 +1,6 @@
 [package]
 name = "melors"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 description = "Keyboard-first terminal MP3 player with queue, search, and tag editing"
 license = "MIT"
@@ -31,7 +31,6 @@ fuzzy-matcher = "0.3"
 id3 = "1.14"
 rodio = "0.20"
 ratatui = "0.29"
-rustfft = "6.4"
 rusqlite = { version = "0.32", features = ["bundled"] }
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8"

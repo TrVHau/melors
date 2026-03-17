@@ -10,6 +10,4 @@ mod mode;
 mod model;
 mod playlists;
 
-pub use model::{
-    FocusPanel, InputMode, PlaylistModalMode, RenameKind, UiState, UiTheme, VisualizerMode,
-};
+pub use model::{FocusPanel, InputMode, PlaylistModalMode, UiState, UiTheme, VisualizerMode};

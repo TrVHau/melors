@@ -3,9 +3,7 @@ use anyhow::Result;
 use std::fs::OpenOptions;
 use std::io::Write;
 
-const RESERVED_KEYS: &[char] = &[
-    'q', 's', 'r', 'f', 'a', 'e', 'u', 'x', 'm', 'M', 't', 'n', 'p',
-];
+const RESERVED_KEYS: &[char] = &['q', 's', 'r', 'f', 'a', 'e', 'u', 'x', 't', 'n', 'p'];
 const PLAYLIST_MODAL_TOGGLE_KEY: char = 'l';
 const LATENCY_LOG_SAMPLE_WINDOW: u64 = 200;
 const LATENCY_LOG_PATH: &str = "/tmp/melors-ui-latency.log";
@@ -22,8 +20,9 @@ impl UiState {
         self.mode = InputMode::PlaylistModal;
         self.playlist_modal_visible = true;
         self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
-        self.playlist_selected = 0;
         self.playlist_item_selected = 0;
+        self.playlist_rename_input.clear();
+        self.playlist_add_track_id = None;
     }
 
     pub fn exit_playlist_modal(&mut self) {
@@ -31,11 +30,16 @@ impl UiState {
         self.playlist_modal_visible = false;
         self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
         self.playlist_item_selected = 0;
+        self.playlist_rename_input.clear();
+        self.playlist_add_track_id = None;
     }
 
     pub fn selected_playlist_id(&self, app: &App) -> Result<Option<i64>> {
         let playlists = app.list_playlists_action()?;
         if playlists.is_empty() {
+            return Ok(None);
+        }
+        if self.playlist_selected >= playlists.len() {
             return Ok(None);
         }
         let idx = self.playlist_selected.min(playlists.len() - 1);
@@ -46,13 +50,21 @@ impl UiState {
         self.playlist_item_selected
     }
 
+    pub fn track_label_by_id(&self, app: &App, track_id: i64) -> String {
+        app.track_by_id(track_id)
+            .map(|track| {
+                format!(
+                    "{} - {}",
+                    track.artist.as_deref().unwrap_or("Unknown Artist"),
+                    track.title
+                )
+            })
+            .unwrap_or_else(|| format!("#{}", track_id))
+    }
+
     pub fn move_playlist_selection(&mut self, app: &App, delta: isize) -> Result<()> {
         let playlists = app.list_playlists_action()?;
-        let len = playlists.len();
-        if len == 0 {
-            self.playlist_selected = 0;
-            return Ok(());
-        }
+        let len = playlists.len().saturating_add(1);
         let next = (self.playlist_selected as isize + delta).clamp(0, len as isize - 1);
         self.playlist_selected = next as usize;
         Ok(())
@@ -125,5 +137,32 @@ mod tests {
         state.exit_playlist_modal();
         assert_eq!(state.mode, InputMode::Normal);
         assert!(!state.playlist_modal_visible);
+    }
+
+    #[test]
+    fn selected_playlist_id_returns_none_for_new_playlist_row() {
+        let app = App::boot().expect("boot app");
+        let playlists = app.list_playlists_action().expect("list playlists");
+        let state = UiState {
+            playlist_selected: playlists.len(),
+            ..UiState::new()
+        };
+
+        let selected = state.selected_playlist_id(&app).expect("resolve selection");
+        assert!(selected.is_none());
+    }
+
+    #[test]
+    fn playlist_selection_can_advance_to_new_playlist_row() {
+        let mut state = UiState::new();
+        let app = App::boot().expect("boot app");
+        let playlists = app.list_playlists_action().expect("list playlists");
+
+        state.playlist_selected = playlists.len().saturating_sub(1);
+        state
+            .move_playlist_selection(&app, 1)
+            .expect("move selection");
+
+        assert_eq!(state.playlist_selected, playlists.len());
     }
 }

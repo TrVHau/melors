@@ -38,19 +38,18 @@ See [architecture.md](architecture.md) for the full module breakdown.
 
 ## Key Dependencies
 
-| Crate            | Purpose                              |
-| ---------------- | ------------------------------------ |
-| `ratatui`        | Terminal UI framework                |
-| `crossterm`      | Cross-platform terminal control      |
-| `rodio`          | Audio playback                       |
-| `rustfft`        | Real FFT for the spectrum visualizer |
-| `id3`            | ID3 tag parsing                      |
-| `rusqlite`       | SQLite (bundled)                     |
-| `fuzzy-matcher`  | Fuzzy string matching                |
-| `walkdir`        | Recursive directory scan             |
-| `dirs`           | XDG-compliant path resolution        |
-| `serde` + `toml` | Config file serialization            |
-| `chrono`         | Clock visualizer timestamps          |
+| Crate            | Purpose                         |
+| ---------------- | ------------------------------- |
+| `ratatui`        | Terminal UI framework           |
+| `crossterm`      | Cross-platform terminal control |
+| `rodio`          | Audio playback                  |
+| `id3`            | ID3 tag parsing                 |
+| `rusqlite`       | SQLite (bundled)                |
+| `fuzzy-matcher`  | Fuzzy string matching           |
+| `walkdir`        | Recursive directory scan        |
+| `dirs`           | XDG-compliant path resolution   |
+| `serde` + `toml` | Config file serialization       |
+| `chrono`         | Clock visualizer timestamps     |
 
 ## Running Tests
 

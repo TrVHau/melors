@@ -13,7 +13,6 @@ impl UiState {
 
         let should_quit = match self.mode {
             InputMode::Search => self.handle_search_input(app, key)?,
-            InputMode::Rename => self.handle_rename_input(app, key)?,
             InputMode::EditTag => self.handle_edit_tag_input(app, key)?,
             InputMode::PlaylistModal => self.handle_playlist_modal_input(app, key)?,
             InputMode::Normal => self.handle_normal_key(app, key)?,
@@ -28,9 +27,14 @@ impl UiState {
         }
 
         match key.code {
+            KeyCode::Char('0') => {
+                self.set_visualizer_mode(VisualizerMode::Off);
+                self.status = String::from("Visualizer: Off (low power)");
+                true
+            }
             KeyCode::Char('1') => {
                 self.set_visualizer_mode(VisualizerMode::Cava);
-                self.status = String::from("Visualizer: Cava");
+                self.status = String::from("Visualizer: Demo Bars");
                 true
             }
             KeyCode::Char('2') => {

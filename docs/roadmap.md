@@ -14,7 +14,7 @@
 - Session persistence: queue, position, mode all restored on relaunch
 - Inline rename: rename track files from within the TUI
 - Visualizer panel with three modes:
-  - Spectrum bars (real FFT via rustfft)
+  - Demo bars
   - Big block-glyph clock
   - CMatrix character rain
 - Render caches with version-counter invalidation
@@ -22,7 +22,6 @@
 
 ## Near Term (v0.2)
 
-- **Playlist management** — create, edit, and play named playlists
 - **Statistics view** — most-played tracks, recently played list
 - **File watcher** — auto-reload library when files change on disk
 - **ID3 tag write-back** — persist rename to the file's ID3 title tag
@@ -31,7 +30,7 @@
 
 - **M3U import/export** — interop with other players
 - **Advanced search syntax** — `artist:`, `album:`, `year:` filters
-- **Theme system** — configurable colors
+- **Theme system** — richer user-configurable colors/keymap persistence
 - **Optional keymap customization** — rebind any key in config
 
 ## Non-Goals

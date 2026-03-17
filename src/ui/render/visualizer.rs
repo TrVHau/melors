@@ -8,10 +8,26 @@ impl UiState {
         app: &App,
     ) {
         match self.visualizer_mode {
+            VisualizerMode::Off => self.draw_off_visualizer(f, area),
             VisualizerMode::Cava => self.draw_cava_visualizer(f, area, app),
             VisualizerMode::Clock => self.draw_clock_visualizer(f, area),
             VisualizerMode::CMatrix => self.draw_cmatrix_visualizer(f, area, app),
         }
+    }
+
+    pub(super) fn draw_off_visualizer(&self, f: &mut ratatui::Frame<'_>, area: Rect) {
+        let lines = self.centered_creeper_lines(area);
+        let panel_bg = self.theme_visualizer_panel_bg_color();
+        let paragraph = Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Visualizer [Off] ")
+                    .style(Style::default().bg(panel_bg))
+                    .border_style(Style::default().fg(self.theme_dim_color())),
+            )
+            .style(Style::default().bg(panel_bg));
+        f.render_widget(paragraph, area);
     }
 
     pub(super) fn draw_cava_visualizer(
@@ -20,6 +36,7 @@ impl UiState {
         area: Rect,
         app: &App,
     ) {
+        let _ = app.visualizer_levels(1);
         let inner = self.visualizer_inner(area);
         let width = inner.width.max(1) as usize;
         let height = inner.height.max(1) as usize;
@@ -28,12 +45,29 @@ impl UiState {
         if self.cava_cached_levels.len() != bars
             || tick_ms.saturating_sub(self.visualizer_last_update_ms) >= 33
         {
-            let fresh = app.visualizer_levels(bars);
-            if self.cava_cached_levels.len() == fresh.len() {
-                for (idx, new_value) in fresh.iter().enumerate() {
+            // Keep tick in a small range to avoid f32 precision loss from epoch-sized values.
+            let tick = ((tick_ms as u64 % 600_000) as f32) / 1000.0;
+            let seed = (self.cached_track_seed(app) % 997) as f32 / 997.0;
+            let fresh: Vec<(f32, f32)> = (0..bars)
+                .map(|idx| {
+                    let lane = idx as f32 / bars as f32;
+                    let drift = tick * 2.8;
+                    let lane_phase = lane * std::f32::consts::TAU * 2.4 + drift + seed * 4.0;
+                    let sweep = lane_phase.sin();
+                    let ripple = (lane_phase * 1.8 + tick * 4.7).cos();
+                    let bounce = (lane_phase * 0.6 + tick * 9.5).sin();
+                    let level = ((sweep * 0.50 + ripple * 0.30 + bounce * 0.35) * 0.5 + 0.5)
+                        .clamp(0.08, 1.0);
+                    let peak = (level + 0.12 + (lane * 0.15)).clamp(0.0, 1.0);
+                    (level, peak.clamp(0.0, 1.0))
+                })
+                .collect();
+
+            if self.cava_cached_levels.len() == bars {
+                for (idx, new_value) in fresh.into_iter().enumerate() {
                     let old = self.cava_cached_levels[idx];
-                    let level = old.0 * 0.65 + new_value.0 * 0.35;
-                    let peak = new_value.1.max(old.1 * 0.92);
+                    let level = old.0 * 0.25 + new_value.0 * 0.75;
+                    let peak = new_value.1.max(old.1 * 0.88);
                     self.cava_cached_levels[idx] = (level, peak);
                 }
             } else {
@@ -43,6 +77,7 @@ impl UiState {
         }
 
         let active_height = height.saturating_sub(1).max(1);
+        let panel_bg = self.theme_visualizer_panel_bg_color();
 
         let mut lines = Vec::with_capacity(height);
         for row in (0..active_height).rev() {
@@ -64,22 +99,25 @@ impl UiState {
 
             lines.push(Line::from(vec![Span::styled(
                 row_text,
-                Style::default().fg(Color::Rgb(236, 236, 245)),
+                Style::default().fg(self.theme_visualizer_primary_color()),
             )]));
         }
 
         let baseline = "-  ".repeat(bars);
         lines.push(Line::from(vec![Span::styled(
             baseline,
-            Style::default().fg(Color::Rgb(150, 150, 170)),
+            Style::default().fg(self.theme_visualizer_secondary_color()),
         )]));
 
-        let paragraph = Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Visualizer [Cava] ")
-                .border_style(Style::default().fg(Color::Rgb(178, 178, 210))),
-        );
+        let paragraph = Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Visualizer [Demo Bars] ")
+                    .style(Style::default().bg(panel_bg))
+                    .border_style(Style::default().fg(self.theme_dim_color())),
+            )
+            .style(Style::default().bg(panel_bg));
         f.render_widget(paragraph, area);
     }
 
@@ -87,6 +125,7 @@ impl UiState {
         let now = Local::now();
         let inner = self.visualizer_inner(area);
         let available_rows = inner.height.max(1) as usize;
+        let panel_bg = self.theme_visualizer_panel_bg_color();
 
         let mut clock_rows = self.big_clock_lines(&now.format("%H:%M:%S").to_string());
         if clock_rows.len() > available_rows {
@@ -99,25 +138,32 @@ impl UiState {
             lines.push(self.centered_line(
                 area.width,
                 &now.format("%A %Y-%m-%d").to_string(),
-                Color::Rgb(245, 185, 175),
+                self.theme_visualizer_clock_date_color(),
             ));
             lines.push(Line::default());
         }
 
         for line in clock_rows {
-            lines.push(self.centered_line(area.width, &line, Color::Rgb(244, 184, 180)));
+            lines.push(self.centered_line(
+                area.width,
+                &line,
+                self.theme_visualizer_clock_time_color(),
+            ));
         }
 
         while lines.len() < available_rows {
             lines.push(Line::default());
         }
 
-        let paragraph = Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Visualizer [Clock] ")
-                .border_style(Style::default().fg(Color::Rgb(204, 156, 164))),
-        );
+        let paragraph = Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Visualizer [Clock] ")
+                    .style(Style::default().bg(panel_bg))
+                    .border_style(Style::default().fg(self.theme_dim_color())),
+            )
+            .style(Style::default().bg(panel_bg));
         f.render_widget(paragraph, area);
     }
 
@@ -134,6 +180,7 @@ impl UiState {
         let position = app.playback_state().position_secs.max(0) as usize;
         let charset = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         let seed = self.cached_track_seed(app) as usize;
+        let panel_bg = self.theme_visualizer_panel_bg_color();
 
         let mut lines = Vec::with_capacity(height);
         for row in 0..height {
@@ -150,15 +197,18 @@ impl UiState {
                     let ch = charset[glyph_index] as char;
                     let distance = head - row;
                     let color = if distance == 0 {
-                        Color::White
+                        self.theme_visualizer_matrix_head_color()
                     } else if distance <= 2 {
-                        Color::Rgb(120, 255, 120)
+                        self.theme_visualizer_matrix_trail_color()
                     } else {
-                        Color::Rgb(0, 120, 0)
+                        self.theme_visualizer_matrix_fade_color()
                     };
                     spans.push(Span::styled(ch.to_string(), Style::default().fg(color)));
                 } else if (seed + tick + row * 5 + col * 3) % 37 == 0 {
-                    spans.push(Span::styled(".", Style::default().fg(Color::Rgb(0, 60, 0))));
+                    spans.push(Span::styled(
+                        ".",
+                        Style::default().fg(self.theme_visualizer_matrix_dot_color()),
+                    ));
                 } else {
                     spans.push(Span::raw(" "));
                 }
@@ -166,12 +216,15 @@ impl UiState {
             lines.push(Line::from(spans));
         }
 
-        let paragraph = Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Visualizer [CMatrix] ")
-                .border_style(Style::default().fg(Color::Rgb(0, 180, 0))),
-        );
+        let paragraph = Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Visualizer [CMatrix] ")
+                    .style(Style::default().bg(panel_bg))
+                    .border_style(Style::default().fg(self.theme_dim_color())),
+            )
+            .style(Style::default().bg(panel_bg));
         f.render_widget(paragraph, area);
     }
 
@@ -242,5 +295,73 @@ impl UiState {
         content.push_str(&" ".repeat(left_pad));
         content.push_str(text);
         Line::from(vec![Span::styled(content, Style::default().fg(color))])
+    }
+
+    fn centered_creeper_lines(&self, area: Rect) -> Vec<Line<'static>> {
+        // 8x8 editable template:
+        // 0 = transparent(panel bg), 1 = green, 2 = lime, 3 = black, 4 = white.
+        // Bạn chỉ cần sửa ma trận TILE bên dưới để vẽ lại creeper theo ý muốn.
+        const TILE: [[u8; 8]; 8] = [
+            [1, 1, 2, 2, 1, 1, 1, 2],
+            [1, 1, 2, 1, 2, 2, 1, 1],
+            [2, 3, 3, 1, 1, 3, 3, 1],
+            [1, 3, 3, 2, 1, 3, 3, 1],
+            [2, 1, 1, 3, 3, 2, 2, 1],
+            [1, 2, 3, 3, 3, 3, 1, 2],
+            [2, 1, 3, 3, 3, 3, 2, 1],
+            [1, 2, 3, 1, 1, 3, 2, 1],
+        ];
+        let inner_h = area.height.saturating_sub(2) as usize;
+        let inner_w = area.width.saturating_sub(2) as usize;
+        if inner_h == 0 || inner_w == 0 {
+            return Vec::new();
+        }
+
+        let colors = [
+            self.theme_visualizer_panel_bg_color(),
+            self.theme_creeper_primary_color(),
+            self.theme_creeper_secondary_color(),
+            self.theme_creeper_shadow_color(),
+            self.theme_creeper_glow_color(),
+        ];
+        let tile_h = TILE.len();
+        let tile_w = TILE[0].len() * 2; // double width keeps pixel-ish proportions
+        let offset_y = inner_h.saturating_sub(tile_h) / 2;
+        let offset_x = inner_w.saturating_sub(tile_w) / 2;
+
+        let mut lines: Vec<Line<'static>> = Vec::with_capacity(inner_h);
+        for y in 0..inner_h {
+            let mut spans: Vec<Span<'static>> = Vec::new();
+            let mut run_start = 0usize;
+            let mut run_style = Style::default().bg(colors[0]);
+
+            for x in 0..inner_w {
+                let style = if y >= offset_y
+                    && y < offset_y + tile_h
+                    && x >= offset_x
+                    && x < offset_x + tile_w
+                {
+                    let ly = y - offset_y;
+                    let lx = (x - offset_x) / 2;
+                    let color_idx = TILE[ly][lx] as usize;
+                    Style::default().bg(colors[color_idx])
+                } else {
+                    Style::default().bg(self.theme_visualizer_panel_bg_color())
+                };
+
+                if x == 0 {
+                    run_style = style;
+                    continue;
+                }
+                if style != run_style {
+                    spans.push(Span::styled(" ".repeat(x - run_start), run_style));
+                    run_start = x;
+                    run_style = style;
+                }
+            }
+            spans.push(Span::styled(" ".repeat(inner_w - run_start), run_style));
+            lines.push(Line::from(spans));
+        }
+        lines
     }
 }

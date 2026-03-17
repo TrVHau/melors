@@ -8,5 +8,7 @@ pub struct AppSession {
     pub tracks_version: u64,
     pub queue: Vec<i64>,
     pub queue_version: u64,
+    pub active_playlist_id: Option<i64>,
+    pub active_playlist_name: Option<String>,
     pub playback_state: PlaybackState,
 }

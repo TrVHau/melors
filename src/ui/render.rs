@@ -5,13 +5,11 @@ use chrono::Local;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph, Tabs};
+use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph};
 
 use crate::app::App;
 
-use super::state::{
-    FocusPanel, InputMode, PlaylistModalMode, RenameKind, UiState, UiTheme, VisualizerMode,
-};
+use super::state::{FocusPanel, InputMode, PlaylistModalMode, UiState, UiTheme, VisualizerMode};
 
 mod chrome;
 mod lists;

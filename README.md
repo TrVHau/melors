@@ -6,7 +6,7 @@ Keyboard-first terminal MP3 player written in Rust.
 
 - Local-only MP3 library scanning
 - Fast keyboard workflow (no mouse)
-- Search + queue + now playing panels
+- Search + playlists + now playing + visualizer layout
 - Persistent playback state and queue
 - Theme presets and visualizer modes
 - Tag editing (title/artist/album) from TUI
@@ -67,9 +67,8 @@ music_dir = "/home/you/Music/melors"
 ### App and Navigation
 
 - `q`: quit
-- `Tab`: cycle panel focus (`Library <-> Queue`)
 - `Up` / `Down`: move selection
-- `Enter`: play selected track/queue item
+- `Enter`: play selected track
 
 ### Playback
 
@@ -80,20 +79,16 @@ music_dir = "/home/you/Music/melors"
 - `Shift+Left` / `Shift+Right`: seek -10s / +10s
 - `[` / `]`: volume down/up
 
-### Library and Queue
+### Library
 
 - `s`: search mode
 - `r`: rescan music directory
 - `f`: toggle favorite on selected track
-- `a`: add selected track to queue
-- `x`: remove selected queue item
-- `Shift+Up` / `Shift+Down` (in Queue): reorder queue item
+- `a`: open playlist picker to add selected (or currently playing) track
 
 ### Metadata Editing
 
-- `m`: rename selected track title/file
-- `M`: rename selected track artist
-- `t`: open tag editor (title/artist/album)
+- `t`: edit selected track metadata (title/artist/album). Saving will also rename filename using `Artist - Title` (or `Title` when artist is empty).
 
 Tag editor:
 
@@ -101,14 +96,30 @@ Tag editor:
 - `Enter`: save
 - `Esc`: cancel
 
+### Playlist Quick Flow
+
+1. Press `l` to open playlist mode.
+   Playlist appears inline in the left pane, replacing Library while keeping Now Playing and Visualizer visible.
+   On narrow terminals, playlist view auto-switches to stacked mode for better readability.
+2. Use `Up/Down` to choose playlist or item.
+3. Press `Enter` on a playlist to open it; press `Enter` on `+ New playlist` to name it first, then press `Enter` again to create it.
+4. Press `a` in Library to open playlist picker, then `Enter` on a playlist to add the track. If you choose `+ New playlist`, melors asks for the playlist name first.
+5. Press `d` in items view to remove the selected track from that playlist.
+6. Press `r` in playlists view to rename the selected playlist, then `Enter` to save.
+7. Press `x` in playlists view to open a delete confirmation, then `Enter` or `x` again to confirm.
+8. Press `Esc` in items view to go back to playlists; press `Esc` again to close.
+9. Press `Enter` in items view to play.
+10. Once a playlist is opened for playback, it becomes the current `Up Next` list in the main UI.
+
 ### Playback Modes and Visualizer
 
+- `Alt+0`: visualizer `Off` (low-power mode)
 - `e`: cycle repeat (`Off -> One -> All`)
 - `u`: toggle shuffle
-- `Alt+1`: visualizer `Cava`
+- `Alt+1`: visualizer `Demo Bars` (lightweight example)
 - `Alt+2`: visualizer `Clock`
 - `Alt+3`: visualizer `CMatrix`
-- `Alt+T`: cycle UI theme (`Neon -> Amber -> Mono -> Forest`)
+- `Alt+T`: cycle UI theme (`Neon -> Forest -> Ocean -> Rose -> Cyber -> Lava -> Aurora -> Candy -> Prism -> Scanline`)
 
 ## Project Structure
 
@@ -149,13 +160,6 @@ src/
 			playback.rs
 			queue.rs
 		metadata.rs
-	quality/
-		mod.rs
-		thresholds.rs
-		evaluator.rs
-		diagnostics.rs
-	release/
-		mod.rs
 	ui/
 		input/
 			dispatch.rs
@@ -172,10 +176,6 @@ src/
 			model.rs
 			mode.rs
 			cache.rs
-config/
-	quality-thresholds.toml
-scripts/
-	quality-gate.sh
 ```
 
 ## Development
@@ -187,27 +187,10 @@ cargo package
 cargo publish --dry-run
 ```
 
-## Quality Gate
+## Notes
 
-Run the same quality gate locally as CI:
-
-```bash
-scripts/quality-gate.sh
-```
-
-Threshold registry:
-
-- `config/quality-thresholds.toml`
-
-## Release Readiness Gate
-
-Run deterministic release/documentation readiness checks:
-
-```bash
-scripts/release-gate.sh
-```
-
-Outputs:
+- Visualizer `Alt+1` is currently a deterministic demo-bars mode, not FFT-driven spectrum analysis.
+- Playlist items support play and remove; adding always starts from Library with `a`.
 
 - `artifacts/release/checksums-<candidate-id>.txt`
 - `artifacts/release/release-summary-<candidate-id>.md`
