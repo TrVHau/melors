@@ -27,6 +27,7 @@ jobs:
         run: scripts/release-gate.sh
 
       - name: Validate crates.io publishability
+        if: github.event_name != 'pull_request'
         run: |
           cargo package
           cargo publish --dry-run

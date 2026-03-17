@@ -41,6 +41,8 @@ Linux build prerequisite (for audio backend):
 sudo apt-get install -y pkg-config libasound2-dev
 ```
 
+If your distro is not Debian/Ubuntu (for example Defora), install equivalent ALSA development packages using your system package manager.
+
 ## Runtime Paths
 
 Created automatically on first run:

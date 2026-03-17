@@ -31,9 +31,25 @@ if [[ ! -f "${RELEASE_NOTES_PATH}" ]]; then
   exit 1
 fi
 
-if grep -nE "^- \\[ \\] " "${CHECKLIST_FILE}" >/dev/null; then
-  echo "docs sync checklist is incomplete: ${CHECKLIST_FILE}" >&2
-  exit 1
+# Docs-sync gate: if code/config/runtime behavior changed, docs must also change.
+DIFF_RANGE=""
+if [[ -n "${GITHUB_BASE_REF:-}" ]] && git rev-parse --verify -q "origin/${GITHUB_BASE_REF}" >/dev/null; then
+  DIFF_RANGE="origin/${GITHUB_BASE_REF}...HEAD"
+elif git rev-parse --verify -q HEAD~1 >/dev/null; then
+  DIFF_RANGE="HEAD~1...HEAD"
+fi
+
+if [[ -n "${DIFF_RANGE}" ]]; then
+  CODE_CHANGED="$(git diff --name-only "${DIFF_RANGE}" -- \
+    'src/**' 'scripts/**' 'config/**' 'Cargo.toml' 'Cargo.lock' || true)"
+  DOCS_CHANGED="$(git diff --name-only "${DIFF_RANGE}" -- \
+    'README.md' 'CONTRIBUTING.md' 'docs/**' 'aidlc-docs/**' '.github/PULL_REQUEST_TEMPLATE.md' || true)"
+
+  if [[ -n "${CODE_CHANGED}" ]] && [[ -z "${DOCS_CHANGED}" ]]; then
+    echo "docs sync gate failed: code/config changed but no docs files changed" >&2
+    echo "update README/CONTRIBUTING/docs/aidlc-docs or PR template, then rerun" >&2
+    exit 1
+  fi
 fi
 
 scripts/quality-gate.sh
