@@ -1,0 +1,38 @@
+name: release-gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release-readiness:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run release readiness gate
+        env:
+          RELEASE_APPROVER: ci-release-gate
+          RELEASE_CANDIDATE_ID: ci-${{ github.run_id }}
+          RELEASE_NOTES_PATH: docs/README.md
+        run: scripts/release-gate.sh
+
+      - name: Validate crates.io publishability
+        run: |
+          cargo package
+          cargo publish --dry-run
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-readiness-artifacts
+          path: artifacts/release/

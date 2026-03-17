@@ -21,6 +21,7 @@ Thumbs.db
 
 # Runtime logs
 *.log
+artifacts/
 
 # Workflow files
 AGENTS.md

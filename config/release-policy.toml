@@ -1,0 +1,19 @@
+version = 1
+release_mode = "manual"
+require_quality_gate = true
+require_artifact_integrity = true
+require_docs_sync = true
+require_explicit_approval = true
+require_rollback_metadata = true
+
+[artifacts]
+primary_binary = "target/release/melors"
+checksum_algorithm = "sha256"
+release_notes_ref = "docs/README.md"
+
+[lifecycle]
+allowed_states = ["Draft", "ReadyForApproval", "Approved", "Published", "RolledBack"]
+
+[audit]
+approval_log_path = "artifacts/release/approval-events.log"
+summary_path_template = "artifacts/release/release-summary-{candidate_id}.md"

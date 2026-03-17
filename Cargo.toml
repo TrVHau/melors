@@ -1,6 +1,6 @@
 [package]
 name = "melors"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "Keyboard-first terminal MP3 player with queue, search, and tag editing"
 license = "MIT"
@@ -17,6 +17,10 @@ include = [
 	"README.md",
 	"LICENSE",
 ]
+
+[[bin]]
+name = "melors"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0"

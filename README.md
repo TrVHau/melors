@@ -19,6 +19,28 @@ cd melors
 cargo run --release
 ```
 
+## Install
+
+After the crate is published on crates.io:
+
+```bash
+cargo install melors
+melors
+```
+
+Install directly from GitHub:
+
+```bash
+cargo install --git https://github.com/TrVHau/melors melors
+melors
+```
+
+Linux build prerequisite (for audio backend):
+
+```bash
+sudo apt-get install -y pkg-config libasound2-dev
+```
+
 ## Runtime Paths
 
 Created automatically on first run:
@@ -130,6 +152,8 @@ src/
 		thresholds.rs
 		evaluator.rs
 		diagnostics.rs
+	release/
+		mod.rs
 	ui/
 		input/
 			dispatch.rs
@@ -157,6 +181,8 @@ scripts/
 ```bash
 cargo check
 cargo run
+cargo package
+cargo publish --dry-run
 ```
 
 ## Quality Gate
@@ -168,7 +194,28 @@ scripts/quality-gate.sh
 ```
 
 Threshold registry:
+
 - `config/quality-thresholds.toml`
+
+## Release Readiness Gate
+
+Run deterministic release/documentation readiness checks:
+
+```bash
+scripts/release-gate.sh
+```
+
+Outputs:
+
+- `artifacts/release/checksums-<candidate-id>.txt`
+- `artifacts/release/release-summary-<candidate-id>.md`
+- `artifacts/release/approval-events.log`
+
+Release gate inputs:
+
+- `config/release-policy.toml`
+- `config/docs-sync-checklist.md`
+- Release notes reference path (`RELEASE_NOTES_PATH`, defaults to `docs/README.md`)
 
 ## License
 

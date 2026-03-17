@@ -29,6 +29,13 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo check
 ```
 
+For release-readiness or documentation-impact changes, also run:
+
+```bash
+scripts/release-gate.sh
+scripts/publish-check.sh
+```
+
 6. Push the branch and open a Pull Request.
 
 ## Pull Request Guidelines
@@ -38,6 +45,7 @@ cargo check
 - Explain the why, not just the what.
 - Include testing notes in the PR description.
 - Link related issues when applicable.
+- Fill the docs impact and release readiness checklist in the PR template.
 
 ## Commit Message Suggestions
 
