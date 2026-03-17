@@ -15,6 +15,53 @@ impl UiState {
         }
     }
 
+    fn quick_add_selected_track_to_playlist(&mut self, app: &mut App) -> Result<()> {
+        let track_id = self
+            .selected_track_id(app)
+            .or(app.playback_state().current_track_id);
+        let Some(track_id) = track_id else {
+            self.status = String::from("No track selected to add");
+            return Ok(());
+        };
+
+        let playlists = app.list_playlists_action()?;
+        let playlist_id = if playlists.is_empty() {
+            let created = app.create_playlist_action("Playlist 1").status_message();
+            if created.code != "playlist.created" {
+                self.status = created.text;
+                return Ok(());
+            }
+            let playlists = app.list_playlists_action()?;
+            if playlists.is_empty() {
+                self.status = String::from("Failed to create default playlist");
+                return Ok(());
+            }
+            self.playlist_selected = 0;
+            playlists[0].id
+        } else {
+            let idx = self.playlist_selected.min(playlists.len() - 1);
+            self.playlist_selected = idx;
+            playlists[idx].id
+        };
+
+        let msg = app
+            .add_playlist_item_action(playlist_id, track_id)
+            .status_message();
+        self.status = format!("{} (playlist #{})", msg.text, playlist_id);
+        Ok(())
+    }
+
+    fn quick_add_selected_track_to_queue(&mut self, app: &mut App) -> Result<()> {
+        if let Some(track_id) = self.selected_track_id(app)
+            && app.add_to_queue(track_id)?
+        {
+            self.status = format!("Queued #{}", track_id);
+        } else {
+            self.status = String::from("No track selected to queue");
+        }
+        Ok(())
+    }
+
     pub(super) fn handle_normal_key(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
         match key.code {
             KeyCode::Char('q') => return Ok(true),
@@ -97,11 +144,10 @@ impl UiState {
                 }
             }
             KeyCode::Char('a') => {
-                if let Some(track_id) = self.selected_track_id(app)
-                    && app.add_to_queue(track_id)?
-                {
-                    self.status = format!("Queued #{}", track_id);
-                }
+                self.quick_add_selected_track_to_playlist(app)?;
+            }
+            KeyCode::Char('A') => {
+                self.quick_add_selected_track_to_queue(app)?;
             }
             KeyCode::Char('e') => {
                 let mode = app.toggle_repeat()?;

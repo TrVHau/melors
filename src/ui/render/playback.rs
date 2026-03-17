@@ -7,13 +7,16 @@ impl UiState {
         let lines = if let Some(track) = current {
             vec![
                 Line::from(format!(
-                    "Track: {} - {}",
+                    "{} - {}",
                     track.artist.as_deref().unwrap_or("Unknown Artist"),
                     track.title
                 )),
                 Line::from(format!(
-                    "Album: {} | Repeat: {} | Shuffle: {}",
+                    "Album: {}",
                     track.album.as_deref().unwrap_or("Unknown Album"),
+                )),
+                Line::from(format!(
+                    "Mode: Repeat={} Shuffle={}",
                     app.playback_state().repeat_mode,
                     if app.playback_state().shuffle_enabled {
                         "On"
@@ -21,14 +24,18 @@ impl UiState {
                         "Off"
                     }
                 )),
-                Line::from(self.next_up_line(app)),
-                Line::from(format!("Volume: {}%", app.volume_percent())),
+                Line::from(format!(
+                    "Queue: {} tracks | Volume: {}%",
+                    app.queue_len(),
+                    app.volume_percent()
+                )),
             ]
         } else {
             vec![
                 Line::from("Track: (none)"),
+                Line::from("Album: (none)"),
                 Line::from(format!(
-                    "Repeat: {} | Shuffle: {}",
+                    "Mode: Repeat={} Shuffle={}",
                     app.playback_state().repeat_mode,
                     if app.playback_state().shuffle_enabled {
                         "On"
@@ -37,22 +44,29 @@ impl UiState {
                     }
                 )),
                 Line::from(self.next_up_line(app)),
-                Line::from(format!("Volume: {}%", app.volume_percent())),
+                Line::from(format!(
+                    "Queue: {} tracks | Volume: {}%",
+                    app.queue_len(),
+                    app.volume_percent()
+                )),
             ]
         };
 
-        let paragraph = Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Now Playing ")
-                .border_style(if app.is_actively_playing() {
-                    Style::default().fg(self.theme_library_color())
-                } else if app.current_track().is_some() {
-                    Style::default().fg(self.theme_queue_color())
-                } else {
-                    Style::default().fg(self.theme_dim_color())
-                }),
-        );
+        let paragraph = Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Now Playing ")
+                    .style(Style::default().bg(self.theme_panel_bg_color()))
+                    .border_style(if app.is_actively_playing() {
+                        Style::default().fg(self.theme_library_color())
+                    } else if app.current_track().is_some() {
+                        Style::default().fg(self.theme_queue_color())
+                    } else {
+                        Style::default().fg(self.theme_dim_color())
+                    }),
+            )
+            .style(Style::default().bg(self.theme_panel_bg_color()));
         f.render_widget(paragraph, area);
     }
 
@@ -75,16 +89,42 @@ impl UiState {
             Self::fmt_duration(current_duration)
         );
 
-        let label_width = area.width.saturating_sub(2) as usize;
+        let sections = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(3), Constraint::Min(2)])
+            .split(area);
+
+        let label_width = sections[0].width.saturating_sub(2) as usize;
         let label = Self::fixed_width_text(&label, label_width);
 
         let gauge = Gauge::default()
-            .block(Block::default().borders(Borders::ALL).title(" Progress "))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Progress ")
+                    .style(Style::default().bg(self.theme_panel_bg_color())),
+            )
             .gauge_style(Style::default().fg(self.theme_progress_color()))
             .ratio(ratio)
             .label(label);
 
-        f.render_widget(gauge, area);
+        let remain = (current_duration - pos).max(0);
+        let info = vec![
+            Line::from(format!("Remaining: {}", Self::fmt_duration(remain))),
+            Line::from(self.next_up_line(app)),
+        ];
+        let card = Paragraph::new(info)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Metrics ")
+                    .style(Style::default().bg(self.theme_panel_bg_color()))
+                    .border_style(Style::default().fg(self.theme_dim_color())),
+            )
+            .style(Style::default().bg(self.theme_panel_bg_color()));
+
+        f.render_widget(gauge, sections[0]);
+        f.render_widget(card, sections[1]);
     }
 
     pub(super) fn draw_edit_tag_popup(&self, f: &mut ratatui::Frame<'_>) {
@@ -149,29 +189,29 @@ impl UiState {
         };
         let text = if self.mode == InputMode::Normal {
             let hint = match self.focus {
-                FocusPanel::Queue => {
-                    "[Tab] panel  [Shift+Up/Down] reorder  [x] remove  [Enter] play"
-                }
-                _ => {
-                    "[Tab] panel  [s] search  [l] playlists  [a] queue  [t] edit metadata  [Enter] play"
-                }
+                FocusPanel::Queue => "Tab panel | Enter play | x remove",
+                _ => "s search | l playlists | a add-playlist | A queue | t edit | Enter play",
             };
-            format!(" {}  |  {}  |  [Alt+T] theme ", self.status, hint)
+            format!(" {} | {} | Alt+T theme ", self.status, hint)
         } else if self.mode == InputMode::Search {
             if let Some(warning) = &self.search_warning {
-                format!(" /{}_  |  warning: {} ", self.search_input, warning)
+                format!(" /{}_ | warning: {} ", self.search_input, warning)
             } else {
                 text
             }
         } else if self.mode == InputMode::PlaylistModal {
             format!(
-                " {}  |  [Esc/l] close  [Enter] open/play  [c/R/d] manage playlist  [a/x] item ops ",
+                " {} | Esc close | Tab pane | Enter play | c new | r rename | d del | a add | x rm ",
                 self.status
             )
         } else {
             text
         };
-        let p = Paragraph::new(text).style(Style::default().fg(self.theme_status_color()));
+        let p = Paragraph::new(text).style(
+            Style::default()
+                .fg(self.theme_status_color())
+                .bg(self.theme_panel_alt_bg_color()),
+        );
         f.render_widget(p, area);
     }
 

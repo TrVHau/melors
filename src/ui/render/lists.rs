@@ -21,20 +21,25 @@ impl UiState {
                 InputMode::Search | InputMode::EditTag | InputMode::PlaylistModal
             );
         let mode_suffix = match self.mode {
-            InputMode::Search => " [/] ",
-            InputMode::EditTag => " [edit tag] ",
-            InputMode::PlaylistModal => " [playlist] ",
-            InputMode::Normal => " ",
+            InputMode::Search => " [/]",
+            InputMode::EditTag => " [edit]",
+            InputMode::PlaylistModal => " [list]",
+            InputMode::Normal => "",
         };
 
         let block = Block::default()
             .borders(Borders::ALL)
-            .title(format!(" Library{mode_suffix}"))
+            .title(format!(" Library {}{}", rows_len, mode_suffix))
             .border_style(if is_active {
                 Style::default().fg(self.theme_library_color())
             } else {
                 Style::default().fg(self.theme_dim_color())
-            });
+            })
+            .style(Style::default().bg(if is_active {
+                self.theme_panel_alt_bg_color()
+            } else {
+                self.theme_panel_bg_color()
+            }));
 
         let current_id = app.playback_state().current_track_id;
         let rows: Vec<String> = self.library_rows_for_width(app, content_width).to_vec();
@@ -60,6 +65,11 @@ impl UiState {
 
         let list = List::new(items)
             .block(block)
+            .style(Style::default().bg(if is_active {
+                self.theme_panel_alt_bg_color()
+            } else {
+                self.theme_panel_bg_color()
+            }))
             .highlight_style(
                 Style::default()
                     .bg(self.theme_library_color())
@@ -87,12 +97,19 @@ impl UiState {
 
         let block = Block::default()
             .borders(Borders::ALL)
-            .title(" Queue ")
+            .title(format!(" Queue {queue_len} "))
             .border_style(if matches!(self.focus, FocusPanel::Queue) {
                 Style::default().fg(self.theme_queue_color())
             } else {
                 Style::default().fg(self.theme_dim_color())
-            });
+            })
+            .style(
+                Style::default().bg(if matches!(self.focus, FocusPanel::Queue) {
+                    self.theme_panel_alt_bg_color()
+                } else {
+                    self.theme_panel_bg_color()
+                }),
+            );
 
         let queue_rows = self.queue_rows_for_width(app, content_width).to_vec();
         let items: Vec<ListItem<'_>> = if queue_len == 0 {
@@ -109,6 +126,13 @@ impl UiState {
 
         let list = List::new(items)
             .block(block)
+            .style(
+                Style::default().bg(if matches!(self.focus, FocusPanel::Queue) {
+                    self.theme_panel_alt_bg_color()
+                } else {
+                    self.theme_panel_bg_color()
+                }),
+            )
             .highlight_style(
                 Style::default()
                     .bg(self.theme_queue_color())

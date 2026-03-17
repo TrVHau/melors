@@ -85,7 +85,8 @@ music_dir = "/home/you/Music/melors"
 - `s`: search mode
 - `r`: rescan music directory
 - `f`: toggle favorite on selected track
-- `a`: add selected track to queue
+- `a`: add selected (or currently playing) track to current playlist
+- `Shift+A`: add selected track to queue
 - `x`: remove selected queue item
 - `Shift+Up` / `Shift+Down` (in Queue): reorder queue item
 
@@ -98,6 +99,20 @@ Tag editor:
 - `Tab`: next field
 - `Enter`: save
 - `Esc`: cancel
+
+### Playlist Quick Flow
+
+1. Press `l` to open playlist modal.
+   Playlist appears inline in the right pane (replacing Queue), not as popup.
+   On narrow terminals, playlist view auto-switches to stacked mode for better readability.
+2. Use `Up/Down` to choose playlist or item (depending on active pane).
+3. Press `Tab` (or `Left/Right`) to switch between Playlist pane and Items pane.
+4. Press `c` or `n` to create playlist, type name, then `Enter` to save.
+5. Press `r` (or `R`) to rename selected playlist.
+6. Press `a` to add selected Library track. If none is selected, melors falls back to currently playing track, then selected queue track.
+7. If there is no playlist yet, pressing `a` auto-creates `Playlist 1` and adds the track.
+8. Press `Enter` in playlist pane to open items, and `Enter` in items pane to play.
+9. Press `x` to remove item, `Shift+Up/Down` to reorder item.
 
 ### Playback Modes and Visualizer
 

@@ -3,9 +3,7 @@ use anyhow::Result;
 use std::fs::OpenOptions;
 use std::io::Write;
 
-const RESERVED_KEYS: &[char] = &[
-    'q', 's', 'r', 'f', 'a', 'e', 'u', 'x', 'm', 'M', 't', 'n', 'p',
-];
+const RESERVED_KEYS: &[char] = &['q', 's', 'r', 'f', 'a', 'e', 'u', 'x', 't', 'n', 'p'];
 const PLAYLIST_MODAL_TOGGLE_KEY: char = 'l';
 const LATENCY_LOG_SAMPLE_WINDOW: u64 = 200;
 const LATENCY_LOG_PATH: &str = "/tmp/melors-ui-latency.log";
@@ -22,6 +20,7 @@ impl UiState {
         self.mode = InputMode::PlaylistModal;
         self.playlist_modal_visible = true;
         self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
+        self.playlist_name_input.clear();
         self.playlist_selected = 0;
         self.playlist_item_selected = 0;
     }
@@ -30,6 +29,7 @@ impl UiState {
         self.mode = InputMode::Normal;
         self.playlist_modal_visible = false;
         self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
+        self.playlist_name_input.clear();
         self.playlist_item_selected = 0;
     }
 

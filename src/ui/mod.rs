@@ -49,8 +49,8 @@ pub fn run(app: &mut App) -> Result<()> {
             terminal.draw(|frame| ui.draw(frame, app))?;
 
             let poll_ms = match ui.visualizer_mode {
-                VisualizerMode::Cava => 16,
-                VisualizerMode::CMatrix => 33,
+                VisualizerMode::Cava => 33,
+                VisualizerMode::CMatrix => 66,
                 VisualizerMode::Clock => 1000,
             };
 

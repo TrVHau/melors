@@ -18,6 +18,8 @@ pub enum InputMode {
 pub enum PlaylistModalMode {
     BrowsePlaylists,
     BrowseItems,
+    CreatePlaylistName,
+    RenamePlaylistName,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -84,6 +86,7 @@ pub struct UiState {
     pub search_warning: Option<String>,
     pub playlist_modal_visible: bool,
     pub playlist_modal_mode: PlaylistModalMode,
+    pub playlist_name_input: String,
     pub playlist_selected: usize,
     pub playlist_item_selected: usize,
     pub playlist_action_latency_samples: u64,
@@ -130,6 +133,7 @@ impl UiState {
             search_warning: None,
             playlist_modal_visible: false,
             playlist_modal_mode: PlaylistModalMode::BrowsePlaylists,
+            playlist_name_input: String::new(),
             playlist_selected: 0,
             playlist_item_selected: 0,
             playlist_action_latency_samples: 0,

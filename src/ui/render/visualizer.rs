@@ -74,12 +74,15 @@ impl UiState {
             Style::default().fg(Color::Rgb(150, 150, 170)),
         )]));
 
-        let paragraph = Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Visualizer [Cava] ")
-                .border_style(Style::default().fg(Color::Rgb(178, 178, 210))),
-        );
+        let paragraph = Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Visualizer [Cava] ")
+                    .style(Style::default().bg(self.theme_panel_bg_color()))
+                    .border_style(Style::default().fg(self.theme_dim_color())),
+            )
+            .style(Style::default().bg(self.theme_panel_bg_color()));
         f.render_widget(paragraph, area);
     }
 
@@ -112,12 +115,15 @@ impl UiState {
             lines.push(Line::default());
         }
 
-        let paragraph = Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Visualizer [Clock] ")
-                .border_style(Style::default().fg(Color::Rgb(204, 156, 164))),
-        );
+        let paragraph = Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Visualizer [Clock] ")
+                    .style(Style::default().bg(self.theme_panel_bg_color()))
+                    .border_style(Style::default().fg(self.theme_dim_color())),
+            )
+            .style(Style::default().bg(self.theme_panel_bg_color()));
         f.render_widget(paragraph, area);
     }
 
@@ -166,12 +172,15 @@ impl UiState {
             lines.push(Line::from(spans));
         }
 
-        let paragraph = Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Visualizer [CMatrix] ")
-                .border_style(Style::default().fg(Color::Rgb(0, 180, 0))),
-        );
+        let paragraph = Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Visualizer [CMatrix] ")
+                    .style(Style::default().bg(self.theme_panel_bg_color()))
+                    .border_style(Style::default().fg(self.theme_dim_color())),
+            )
+            .style(Style::default().bg(self.theme_panel_bg_color()));
         f.render_widget(paragraph, area);
     }
 

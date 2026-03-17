@@ -1,39 +1,30 @@
 use super::*;
 
 impl UiState {
+    pub(super) fn theme_panel_bg_color(&self) -> Color {
+        match self.theme {
+            UiTheme::Neon => Color::Rgb(34, 34, 52),
+            UiTheme::Amber => Color::Rgb(48, 38, 28),
+            UiTheme::Mono => Color::Rgb(42, 42, 42),
+            UiTheme::Forest => Color::Rgb(28, 40, 28),
+        }
+    }
+
+    pub(super) fn theme_panel_alt_bg_color(&self) -> Color {
+        match self.theme {
+            UiTheme::Neon => Color::Rgb(46, 46, 68),
+            UiTheme::Amber => Color::Rgb(62, 49, 36),
+            UiTheme::Mono => Color::Rgb(56, 56, 56),
+            UiTheme::Forest => Color::Rgb(38, 54, 38),
+        }
+    }
+
     pub(super) fn theme_dim_color(&self) -> Color {
         match self.theme {
             UiTheme::Neon => Color::Rgb(70, 70, 95),
             UiTheme::Amber => Color::Rgb(92, 76, 54),
             UiTheme::Mono => Color::Rgb(95, 95, 95),
             UiTheme::Forest => Color::Rgb(58, 84, 58),
-        }
-    }
-
-    pub(super) fn theme_muted_color(&self) -> Color {
-        match self.theme {
-            UiTheme::Neon => Color::Rgb(120, 120, 160),
-            UiTheme::Amber => Color::Rgb(176, 145, 106),
-            UiTheme::Mono => Color::Rgb(155, 155, 155),
-            UiTheme::Forest => Color::Rgb(120, 155, 120),
-        }
-    }
-
-    pub(super) fn theme_accent_color(&self) -> Color {
-        match self.theme {
-            UiTheme::Neon => Color::Cyan,
-            UiTheme::Amber => Color::Rgb(255, 176, 90),
-            UiTheme::Mono => Color::White,
-            UiTheme::Forest => Color::Rgb(120, 220, 140),
-        }
-    }
-
-    pub(super) fn theme_highlight_color(&self) -> Color {
-        match self.theme {
-            UiTheme::Neon => Color::White,
-            UiTheme::Amber => Color::Rgb(255, 236, 190),
-            UiTheme::Mono => Color::White,
-            UiTheme::Forest => Color::Rgb(214, 255, 214),
         }
     }
 

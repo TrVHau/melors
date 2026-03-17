@@ -1,27 +1,46 @@
 use super::*;
 
 impl UiState {
-    pub(super) fn draw_playlist_modal(&mut self, f: &mut ratatui::Frame<'_>, app: &App) {
+    pub(super) fn draw_playlist_modal(
+        &mut self,
+        f: &mut ratatui::Frame<'_>,
+        area: Rect,
+        app: &App,
+    ) {
         if !self.playlist_modal_visible {
             return;
         }
 
-        let area = f.area();
-        let popup_width = 84u16.min(area.width.saturating_sub(4));
-        let popup_height = 22u16.min(area.height.saturating_sub(4));
-        let x = area.x + area.width.saturating_sub(popup_width) / 2;
-        let y = area.y + area.height.saturating_sub(popup_height) / 2;
-        let popup_area = Rect::new(x, y, popup_width, popup_height);
+        fn fit_text(value: &str, width: usize) -> String {
+            if width == 0 {
+                return String::new();
+            }
+            let mut out: String = value.chars().take(width).collect();
+            if value.chars().count() > width && width > 2 {
+                out = value.chars().take(width - 2).collect();
+                out.push_str("..");
+            }
+            out
+        }
 
         let vertical = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(3), Constraint::Length(1)])
-            .split(popup_area);
+            .constraints([Constraint::Min(6)])
+            .split(area);
 
-        let cols = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(42), Constraint::Percentage(58)])
-            .split(vertical[0]);
+        let split = if area.width < 72 {
+            Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Percentage(42), Constraint::Percentage(58)])
+                .split(vertical[0])
+        } else {
+            Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
+                .split(vertical[0])
+        };
+        let left_area = split[0];
+        let right_area = split[1];
 
         let playlists = app.list_playlists_action().unwrap_or_default();
         if playlists.is_empty() {
@@ -32,9 +51,13 @@ impl UiState {
         let playlist_items: Vec<ListItem<'_>> = if playlists.is_empty() {
             vec![ListItem::new("(no playlists)")]
         } else {
+            let width = left_area.width.saturating_sub(8) as usize;
             playlists
                 .iter()
-                .map(|p| ListItem::new(format!("#{} {}", p.id, p.name)))
+                .map(|p| {
+                    let raw = format!("#{} {}", p.id, p.name);
+                    ListItem::new(fit_text(&raw, width))
+                })
                 .collect()
         };
 
@@ -49,19 +72,47 @@ impl UiState {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(" Playlists ")
+                    .title(format!(" Playlists ({}) ", playlists.len()))
                     .border_style(
-                        if self.playlist_modal_mode == PlaylistModalMode::BrowsePlaylists {
-                            Style::default().fg(Color::Cyan)
+                        if matches!(
+                            self.playlist_modal_mode,
+                            PlaylistModalMode::BrowsePlaylists
+                                | PlaylistModalMode::CreatePlaylistName
+                                | PlaylistModalMode::RenamePlaylistName
+                        ) {
+                            Style::default().fg(self.theme_library_color())
                         } else {
-                            Style::default().fg(Color::Gray)
+                            Style::default().fg(self.theme_dim_color())
                         },
-                    ),
+                    )
+                    .style(Style::default().bg(
+                        if matches!(
+                            self.playlist_modal_mode,
+                            PlaylistModalMode::BrowsePlaylists
+                                | PlaylistModalMode::CreatePlaylistName
+                                | PlaylistModalMode::RenamePlaylistName
+                        ) {
+                            self.theme_panel_alt_bg_color()
+                        } else {
+                            self.theme_panel_bg_color()
+                        },
+                    )),
             )
+            .style(Style::default().bg(
+                if matches!(
+                    self.playlist_modal_mode,
+                    PlaylistModalMode::BrowsePlaylists
+                        | PlaylistModalMode::CreatePlaylistName
+                        | PlaylistModalMode::RenamePlaylistName
+                ) {
+                    self.theme_panel_alt_bg_color()
+                } else {
+                    self.theme_panel_bg_color()
+                },
+            ))
             .highlight_style(
                 Style::default()
-                    .fg(Color::Black)
-                    .bg(Color::Cyan)
+                    .fg(self.theme_header_color())
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("-> ");
@@ -80,6 +131,7 @@ impl UiState {
         let right_rows: Vec<ListItem<'_>> = if items.is_empty() {
             vec![ListItem::new("(no playlist items)")]
         } else {
+            let width = right_area.width.saturating_sub(8) as usize;
             items
                 .iter()
                 .enumerate()
@@ -108,7 +160,7 @@ impl UiState {
                             item.original_path.clone().unwrap_or_default()
                         )
                     };
-                    ListItem::new(label)
+                    ListItem::new(fit_text(&label, width))
                 })
                 .collect()
         };
@@ -124,31 +176,37 @@ impl UiState {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(" Playlist Items ")
+                    .title(format!(" Items ({}) ", items.len()))
                     .border_style(
                         if self.playlist_modal_mode == PlaylistModalMode::BrowseItems {
-                            Style::default().fg(Color::Cyan)
+                            Style::default().fg(self.theme_queue_color())
                         } else {
-                            Style::default().fg(Color::Gray)
+                            Style::default().fg(self.theme_dim_color())
                         },
-                    ),
+                    )
+                    .style(Style::default().bg(
+                        if self.playlist_modal_mode == PlaylistModalMode::BrowseItems {
+                            self.theme_panel_alt_bg_color()
+                        } else {
+                            self.theme_panel_bg_color()
+                        },
+                    )),
             )
+            .style(Style::default().bg(
+                if self.playlist_modal_mode == PlaylistModalMode::BrowseItems {
+                    self.theme_panel_alt_bg_color()
+                } else {
+                    self.theme_panel_bg_color()
+                },
+            ))
             .highlight_style(
                 Style::default()
-                    .fg(Color::Black)
-                    .bg(Color::Green)
+                    .fg(self.theme_header_color())
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("-> ");
 
-        f.render_widget(Clear, popup_area);
-        f.render_stateful_widget(left, cols[0], &mut left_state);
-        f.render_stateful_widget(right, cols[1], &mut right_state);
-
-        let help = Paragraph::new(
-            "[Esc/l] close  [Enter] open/play  [b] back  [c] create  [R] rename  [d] delete  [a] add  [x] remove  [Shift+Up/Down] move",
-        )
-        .style(Style::default().fg(Color::Gray));
-        f.render_widget(help, vertical[1]);
+        f.render_stateful_widget(left, left_area, &mut left_state);
+        f.render_stateful_widget(right, right_area, &mut right_state);
     }
 }

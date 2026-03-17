@@ -1,6 +1,6 @@
 [package]
 name = "melors"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 description = "Keyboard-first terminal MP3 player with queue, search, and tag editing"
 license = "MIT"
