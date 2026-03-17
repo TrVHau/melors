@@ -29,11 +29,7 @@ impl UiState {
             .split(area);
 
         let playlists = app.list_playlists_action().unwrap_or_default();
-        if playlists.is_empty() {
-            self.playlist_selected = 0;
-        } else {
-            self.playlist_selected = self.playlist_selected.min(playlists.len() - 1);
-        }
+        self.playlist_selected = self.playlist_selected.min(playlists.len());
         let selected_playlist_id = playlists.get(self.playlist_selected).map(|p| p.id);
         let items = selected_playlist_id
             .and_then(|id| app.list_playlist_items_action(id).ok())

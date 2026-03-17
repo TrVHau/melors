@@ -122,4 +122,31 @@ mod tests {
         assert_eq!(state.mode, InputMode::Normal);
         assert!(!state.playlist_modal_visible);
     }
+
+    #[test]
+    fn selected_playlist_id_returns_none_for_new_playlist_row() {
+        let app = App::boot().expect("boot app");
+        let playlists = app.list_playlists_action().expect("list playlists");
+        let state = UiState {
+            playlist_selected: playlists.len(),
+            ..UiState::new()
+        };
+
+        let selected = state.selected_playlist_id(&app).expect("resolve selection");
+        assert!(selected.is_none());
+    }
+
+    #[test]
+    fn playlist_selection_can_advance_to_new_playlist_row() {
+        let mut state = UiState::new();
+        let app = App::boot().expect("boot app");
+        let playlists = app.list_playlists_action().expect("list playlists");
+
+        state.playlist_selected = playlists.len().saturating_sub(1);
+        state
+            .move_playlist_selection(&app, 1)
+            .expect("move selection");
+
+        assert_eq!(state.playlist_selected, playlists.len());
+    }
 }
