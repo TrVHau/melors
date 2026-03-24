@@ -121,10 +121,7 @@ impl UiState {
             })
             .unwrap_or_else(|| String::from("no track"));
 
-        let text = format!(
-            " melors [{mode}] | {} ",
-            current
-        );
+        let text = format!(" melors [{mode}] | {} ", current);
         let p = Paragraph::new(text).style(
             Style::default()
                 .fg(self.theme_header_color())

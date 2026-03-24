@@ -45,7 +45,13 @@ impl UiState {
         playlists: &[crate::services::storage::Playlist],
         items: &[crate::services::storage::PlaylistItem],
         content_width: usize,
-    ) -> (String, Vec<ListItem<'static>>, Option<usize>, Color, &'static str) {
+    ) -> (
+        String,
+        Vec<ListItem<'static>>,
+        Option<usize>,
+        Color,
+        &'static str,
+    ) {
         let selected_name = playlists
             .get(self.playlist_selected)
             .map(|p| p.name.as_str())
@@ -73,7 +79,13 @@ impl UiState {
     fn rename_playlist_view(
         &self,
         content_width: usize,
-    ) -> (String, Vec<ListItem<'static>>, Option<usize>, Color, &'static str) {
+    ) -> (
+        String,
+        Vec<ListItem<'static>>,
+        Option<usize>,
+        Color,
+        &'static str,
+    ) {
         let display = format!("Name: {}_", self.playlist_rename_input);
         (
             String::from(" Rename Playlist "),
@@ -87,7 +99,13 @@ impl UiState {
     fn create_playlist_view(
         &self,
         content_width: usize,
-    ) -> (String, Vec<ListItem<'static>>, Option<usize>, Color, &'static str) {
+    ) -> (
+        String,
+        Vec<ListItem<'static>>,
+        Option<usize>,
+        Color,
+        &'static str,
+    ) {
         let display = format!("Name: {}_", self.playlist_rename_input);
         (
             String::from(" Create Playlist "),
@@ -102,7 +120,13 @@ impl UiState {
         &self,
         playlists: &[crate::services::storage::Playlist],
         content_width: usize,
-    ) -> (String, Vec<ListItem<'static>>, Option<usize>, Color, &'static str) {
+    ) -> (
+        String,
+        Vec<ListItem<'static>>,
+        Option<usize>,
+        Color,
+        &'static str,
+    ) {
         let playlist_name = playlists
             .get(self.playlist_selected)
             .map(|playlist| playlist.name.as_str())
@@ -122,7 +146,13 @@ impl UiState {
         app: &App,
         playlists: &[crate::services::storage::Playlist],
         content_width: usize,
-    ) -> (String, Vec<ListItem<'static>>, Option<usize>, Color, &'static str) {
+    ) -> (
+        String,
+        Vec<ListItem<'static>>,
+        Option<usize>,
+        Color,
+        &'static str,
+    ) {
         let mut rows = if playlists.is_empty() {
             Vec::new()
         } else {

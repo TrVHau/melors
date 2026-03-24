@@ -71,7 +71,9 @@ pub fn run(app: &mut App) -> Result<()> {
             let time_until_frame = frame_interval.saturating_sub(last_draw_at.elapsed());
             let poll_timeout = time_until_frame.min(Duration::from_millis(40));
 
-            if event::poll(poll_timeout)? && let Event::Key(key) = event::read()? {
+            if event::poll(poll_timeout)?
+                && let Event::Key(key) = event::read()?
+            {
                 if ui.handle_key(app, key)? {
                     return Ok(());
                 }

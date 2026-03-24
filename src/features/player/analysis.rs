@@ -2,18 +2,18 @@ use super::*;
 
 impl Player {
     pub(super) fn build_sink(
-        handle: &OutputStreamHandle,
+        mixer: &rodio::mixer::Mixer,
         path: &Path,
         start_secs: u64,
-    ) -> Result<Sink> {
+    ) -> Result<RodioPlayer> {
         let file =
             File::open(path).with_context(|| format!("failed to open {}", path.display()))?;
         let reader = BufReader::new(file);
         let decoder = Decoder::new(reader).context("failed to decode audio file")?;
         let source = decoder.skip_duration(Duration::from_secs(start_secs));
-        let sink = Sink::try_new(handle).context("failed to create audio sink")?;
-        sink.append(source);
-        Ok(sink)
+        let player = RodioPlayer::connect_new(mixer);
+        player.append(source);
+        Ok(player)
     }
 
     fn analyze_file(_path: &Path) -> Result<VisualizerAnalysis> {

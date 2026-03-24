@@ -23,7 +23,10 @@ impl UiState {
     }
 
     fn default_playlist_name(&self, app: &App) -> Result<String> {
-        Ok(format!("Playlist {}", app.list_playlists_action()?.len() + 1))
+        Ok(format!(
+            "Playlist {}",
+            app.list_playlists_action()?.len() + 1
+        ))
     }
 
     pub(super) fn resolve_track_for_playlist_add(&mut self, app: &mut App) -> Option<i64> {
@@ -41,7 +44,8 @@ impl UiState {
             }
             KeyCode::Enter => {
                 let requested_name = self.playlist_rename_input.trim().to_string();
-                let Some(playlist_id) = self.create_playlist_with_name(app, &requested_name)? else {
+                let Some(playlist_id) = self.create_playlist_with_name(app, &requested_name)?
+                else {
                     return Ok(());
                 };
 
@@ -103,11 +107,7 @@ impl UiState {
         Ok(())
     }
 
-    fn handle_delete_playlist_confirmation(
-        &mut self,
-        app: &mut App,
-        key: KeyEvent,
-    ) -> Result<()> {
+    fn handle_delete_playlist_confirmation(&mut self, app: &mut App, key: KeyEvent) -> Result<()> {
         match key.code {
             KeyCode::Esc => {
                 self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
@@ -327,22 +327,20 @@ impl UiState {
         }
 
         match key.code {
-            KeyCode::Esc => {
-                match self.playlist_modal_mode {
-                    PlaylistModalMode::BrowseItems => {
-                        self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
-                        self.playlist_item_selected = 0;
-                        self.status = String::from("Back to playlists");
-                    }
-                    PlaylistModalMode::BrowsePlaylists => {
-                        self.exit_playlist_modal();
-                        self.status = String::from("Closed playlist modal");
-                    }
-                    PlaylistModalMode::CreatePlaylist => unreachable!(),
-                    PlaylistModalMode::RenamePlaylist => unreachable!(),
-                    PlaylistModalMode::ConfirmDeletePlaylist => unreachable!(),
+            KeyCode::Esc => match self.playlist_modal_mode {
+                PlaylistModalMode::BrowseItems => {
+                    self.playlist_modal_mode = PlaylistModalMode::BrowsePlaylists;
+                    self.playlist_item_selected = 0;
+                    self.status = String::from("Back to playlists");
                 }
-            }
+                PlaylistModalMode::BrowsePlaylists => {
+                    self.exit_playlist_modal();
+                    self.status = String::from("Closed playlist modal");
+                }
+                PlaylistModalMode::CreatePlaylist => unreachable!(),
+                PlaylistModalMode::RenamePlaylist => unreachable!(),
+                PlaylistModalMode::ConfirmDeletePlaylist => unreachable!(),
+            },
             KeyCode::Char('l') => {
                 self.exit_playlist_modal();
                 self.status = String::from("Closed playlist modal");
@@ -361,28 +359,26 @@ impl UiState {
                     self.move_playlist_item_selection(app, -1)?;
                 }
             }
-            KeyCode::Enter => {
-                match self.playlist_modal_mode {
-                    PlaylistModalMode::BrowsePlaylists => {
-                        self.handle_playlist_browse_enter(app)?;
-                    }
-                    PlaylistModalMode::BrowseItems => {
-                        let Some(playlist_id) = self.selected_playlist_id(app)? else {
-                            self.status = String::from("No playlist selected");
-                            return Ok(false);
-                        };
-                        let result = app.play_from_playlist_action(
-                            playlist_id,
-                            Some(self.selected_playlist_item_index()),
-                        );
-                        let msg = result.status_message();
-                        self.status = msg.text;
-                    }
-                    PlaylistModalMode::CreatePlaylist => unreachable!(),
-                    PlaylistModalMode::RenamePlaylist => unreachable!(),
-                    PlaylistModalMode::ConfirmDeletePlaylist => unreachable!(),
+            KeyCode::Enter => match self.playlist_modal_mode {
+                PlaylistModalMode::BrowsePlaylists => {
+                    self.handle_playlist_browse_enter(app)?;
                 }
-            }
+                PlaylistModalMode::BrowseItems => {
+                    let Some(playlist_id) = self.selected_playlist_id(app)? else {
+                        self.status = String::from("No playlist selected");
+                        return Ok(false);
+                    };
+                    let result = app.play_from_playlist_action(
+                        playlist_id,
+                        Some(self.selected_playlist_item_index()),
+                    );
+                    let msg = result.status_message();
+                    self.status = msg.text;
+                }
+                PlaylistModalMode::CreatePlaylist => unreachable!(),
+                PlaylistModalMode::RenamePlaylist => unreachable!(),
+                PlaylistModalMode::ConfirmDeletePlaylist => unreachable!(),
+            },
             KeyCode::Char('d') => {
                 if self.playlist_modal_mode != PlaylistModalMode::BrowseItems {
                     return Ok(false);

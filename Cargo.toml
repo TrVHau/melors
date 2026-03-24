@@ -1,6 +1,6 @@
 [package]
 name = "melors"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 description = "Keyboard-first terminal MP3 player with queue, search, and tag editing"
 license = "MIT"
@@ -10,7 +10,7 @@ homepage = "https://github.com/TrVHau/melors"
 documentation = "https://docs.rs/melors"
 keywords = ["mp3", "terminal", "tui", "music-player", "ratatui"]
 categories = ["command-line-utilities", "multimedia::audio"]
-rust-version = "1.85"
+rust-version = "1.87"
 include = [
 	"src/**",
 	"Cargo.toml",
@@ -24,14 +24,14 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0"
-chrono = "0.4"
-crossterm = "0.28"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+crossterm = "0.29"
 dirs = "6.0"
 fuzzy-matcher = "0.3"
 id3 = "1.14"
-rodio = "0.20"
-ratatui = "0.29"
-rusqlite = { version = "0.32", features = ["bundled"] }
+rodio = { version = "0.22.2", default-features = false, features = ["playback", "mp3"] }
+ratatui = { version = "0.30.0", default-features = false, features = ["crossterm"] }
+rusqlite = { version = "0.39.0", default-features = false, features = ["bundled"] }
 serde = { version = "1.0", features = ["derive"] }
-toml = "0.8"
+toml = "0.9.8"
 walkdir = "2.5"

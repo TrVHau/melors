@@ -86,7 +86,10 @@ impl UiState {
             InputMode::EditTag => {
                 let field_name = ["Title", "Artist", "Album"][self.edit_tag_field];
                 let value = &self.edit_tag_inputs[self.edit_tag_field];
-                format!(" Edit [{}]: {}_ | {} ", field_name, value, EDIT_TAG_STATUS_HINT)
+                format!(
+                    " Edit [{}]: {}_ | {} ",
+                    field_name, value, EDIT_TAG_STATUS_HINT
+                )
             }
         }
     }

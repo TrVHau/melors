@@ -6,7 +6,7 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
-use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
+use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player as RodioPlayer, Source};
 
 mod analysis;
 mod control;
@@ -48,20 +48,17 @@ struct AnalysisCacheKey {
 }
 
 struct Backend {
-    _stream: OutputStream,
-    handle: OutputStreamHandle,
-    sink: Option<Sink>,
+    stream: MixerDeviceSink,
+    sink: Option<RodioPlayer>,
 }
 
 impl Player {
     pub fn new() -> Result<Self> {
-        let (stream, handle) =
-            OutputStream::try_default().context("failed to init audio output")?;
+        let stream = DeviceSinkBuilder::open_default_sink().context("failed to init audio output")?;
         let (analysis_tx, analysis_rx) = mpsc::channel();
         Ok(Self {
             backend: Backend {
-                _stream: stream,
-                handle,
+                stream,
                 sink: None,
             },
             current_path: None,
