@@ -19,7 +19,7 @@ impl Player {
             }
         }
 
-        let sink = Self::build_sink(&self.backend.handle, path, start_secs.max(0) as u64)?;
+        let sink = Self::build_sink(self.backend.stream.mixer(), path, start_secs.max(0) as u64)?;
         sink.set_volume(self.volume);
         self.stop_current();
         self.backend.sink = Some(sink);
@@ -56,7 +56,11 @@ impl Player {
     pub fn seek_to(&mut self, position_secs: i64) -> Result<()> {
         let was_paused = self.paused;
         if let Some(path) = self.current_path.clone() {
-            let sink = Self::build_sink(&self.backend.handle, &path, position_secs.max(0) as u64)?;
+            let sink = Self::build_sink(
+                self.backend.stream.mixer(),
+                &path,
+                position_secs.max(0) as u64,
+            )?;
             sink.set_volume(self.volume);
             self.stop_current();
             if was_paused {

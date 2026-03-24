@@ -56,8 +56,7 @@ impl App {
             return Ok(paused);
         }
 
-        if let Some(track_id) = self.session.playback_state.current_track_id
-        {
+        if let Some(track_id) = self.session.playback_state.current_track_id {
             let start_at = self.session.playback_state.position_secs;
             self.play_track_from_position(track_id, start_at, false)?;
             return Ok(false);
@@ -145,10 +144,12 @@ impl App {
     }
 
     fn current_queue_index(&self) -> Option<usize> {
-        self.session
-            .playback_state
-            .current_track_id
-            .and_then(|id| self.session.queue.iter().position(|queue_id| *queue_id == id))
+        self.session.playback_state.current_track_id.and_then(|id| {
+            self.session
+                .queue
+                .iter()
+                .position(|queue_id| *queue_id == id)
+        })
     }
 
     fn play_track_from_position(

@@ -95,7 +95,10 @@ impl UiState {
         self.playlist_action_latency_max_micros =
             self.playlist_action_latency_max_micros.max(elapsed_micros);
 
-        if self.playlist_action_latency_samples % LATENCY_LOG_SAMPLE_WINDOW == 0 {
+        if self
+            .playlist_action_latency_samples
+            .is_multiple_of(LATENCY_LOG_SAMPLE_WINDOW)
+        {
             let avg = self.playlist_action_latency_total_micros
                 / self.playlist_action_latency_samples as u128;
             let _ = append_latency_log(format!(

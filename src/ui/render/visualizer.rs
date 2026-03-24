@@ -204,7 +204,7 @@ impl UiState {
                         self.theme_visualizer_matrix_fade_color()
                     };
                     spans.push(Span::styled(ch.to_string(), Style::default().fg(color)));
-                } else if (seed + tick + row * 5 + col * 3) % 37 == 0 {
+                } else if (seed + tick + row * 5 + col * 3).is_multiple_of(37) {
                     spans.push(Span::styled(
                         ".",
                         Style::default().fg(self.theme_visualizer_matrix_dot_color()),

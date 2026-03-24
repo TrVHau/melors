@@ -20,11 +20,7 @@ impl UiState {
         }
     }
 
-    fn handle_normal_playback_controls(
-        &mut self,
-        app: &mut App,
-        key: KeyEvent,
-    ) -> Result<bool> {
+    fn handle_normal_playback_controls(&mut self, app: &mut App, key: KeyEvent) -> Result<bool> {
         match key.code {
             KeyCode::Char(' ') => {
                 let paused = app.toggle_play_pause()?;

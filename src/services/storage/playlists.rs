@@ -58,9 +58,9 @@ impl Storage {
     }
 
     pub fn list_playlists(&self) -> Result<Vec<Playlist>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, name FROM playlists ORDER BY name COLLATE NOCASE ASC",
-        )?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id, name FROM playlists ORDER BY name COLLATE NOCASE ASC")?;
         let rows = stmt.query_map([], |row| {
             Ok(Playlist {
                 id: row.get(0)?,
@@ -86,6 +86,18 @@ impl Storage {
             )
             .optional()?
             .ok_or_else(|| anyhow::anyhow!("track not found"))?;
+
+        let already_exists = tx
+            .query_row(
+                "SELECT 1 FROM playlist_items WHERE playlist_id=?1 AND track_id=?2 LIMIT 1",
+                params![playlist_id, track_id],
+                |row| row.get::<_, i64>(0),
+            )
+            .optional()?
+            .is_some();
+        if already_exists {
+            return Ok(());
+        }
 
         let next_order: i64 = tx.query_row(
             "SELECT COALESCE(MAX(order_index), -1) + 1 FROM playlist_items WHERE playlist_id=?1",
@@ -287,12 +299,48 @@ mod tests {
             .add_playlist_item(playlist_id, track_id)
             .expect("seed item");
 
-        storage.delete_playlist(playlist_id).expect("delete playlist");
+        storage
+            .delete_playlist(playlist_id)
+            .expect("delete playlist");
 
         let playlists = storage.list_playlists().expect("list playlists");
-        assert!(playlists.into_iter().all(|playlist| playlist.id != playlist_id));
-        let items = storage.load_playlist_items(playlist_id).expect("load items after delete");
+        assert!(
+            playlists
+                .into_iter()
+                .all(|playlist| playlist.id != playlist_id)
+        );
+        let items = storage
+            .load_playlist_items(playlist_id)
+            .expect("load items after delete");
         assert!(items.is_empty());
+
+        drop(storage);
+        cleanup_db(&db_path);
+    }
+
+    #[test]
+    fn add_playlist_item_ignores_duplicate_track_in_same_playlist() {
+        let db_path = temp_db_path();
+        let mut storage = Storage::open(&db_path).expect("open storage");
+        seed_tracks(&mut storage);
+        let playlist_id = storage
+            .create_playlist("No Duplicates")
+            .expect("create playlist");
+        let track_id = storage.load_tracks().expect("load tracks")[0].id;
+
+        storage
+            .add_playlist_item(playlist_id, track_id)
+            .expect("first add");
+        storage
+            .add_playlist_item(playlist_id, track_id)
+            .expect("duplicate add should be a no-op");
+
+        let items = storage
+            .load_playlist_items(playlist_id)
+            .expect("load items");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].track_id, Some(track_id));
+        assert_eq!(items[0].order_index, 0);
 
         drop(storage);
         cleanup_db(&db_path);
